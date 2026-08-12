@@ -15,9 +15,13 @@ C_GRAY="\033[38;2;86;95;137m"
 
 print_banner() {
     [ "$menu_program" = "fzf" ] || return 0
-    printf "${C_PURPLE}  ___   _ __  _ ${C_BLUE}─── cli ── es 🇲🇽 🇪🇸${RESET}\n"
-    printf "${C_PURPLE} / _ \ / ' \| | ${C_GRAY}anime subtitulado en español${RESET}\n"
-    printf "${C_PURPLE}/_/ \_|_|_|_|_| ${C_GRAY}v%s${RESET}\n\n" "$version_number"
+    printf "${C_PURPLE}  █████  ███    ██ ██${RESET}\n"
+    printf "${C_PURPLE} ██   ██ ████   ██ ██${RESET}\n"
+    printf "${C_PURPLE} ███████ ██ ██  ██ ██${RESET}\n"
+    printf "${C_PURPLE} ██   ██ ██  ██ ██ ██${RESET}\n"
+    printf "${C_PURPLE} ██   ██ ██   ████ ██${RESET}\n"
+    printf "${C_BLUE} ─── C L I   E S ────────────────────────${RESET}\n"
+    printf "${C_GRAY} anime subtitulado en español ${C_GREEN}v%s${RESET}\n\n" "$version_number"
 }
 
 # POSIX Non-blocking Spinner
