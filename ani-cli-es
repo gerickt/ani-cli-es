@@ -71,15 +71,21 @@ menu() {
 nth() {
     _stdin=$(cat -)
     [ -z "$_stdin" ] && return 1
-    _line_count="$(printf "%s\n" "$_stdin" | wc -l | tr -d "[:space:]")"
-    [ "$_line_count" -eq 1 ] && printf "%s" "$_stdin" | cut -f 2,3 && return 0
+    if [ -n "$index" ]; then
+        _line_count="$(printf "%s\n" "$_stdin" | wc -l | tr -d "[:space:]")"
+        [ "$_line_count" -eq 1 ] && printf "%s" "$_stdin" | cut -f 2,3 && return 0
+    fi
     _prompt="$1"
     [ $# -ne 1 ] && _multi_flag="$2"
     _line=$(printf "%s" "$_stdin" | cut -f 1,3 | tr '\t' ' ' | menu "$_prompt" "$_multi_flag" "$menu_extra_flags" | cut -d " " -f 1)
     _line_start=$(printf "%s" "$_line" | head -n 1)
     _line_end=$(printf "%s" "$_line" | tail -n 1)
     [ -n "$_line" ] || return 1
-    if [ "$_line_start" = "$_line_end" ]; then
+
+    _cols="$(printf "%s\n" "$_stdin" | head -n 1 | awk -F'\t' '{print NF}')"
+    if [ "$_cols" -eq 2 ]; then
+        printf "%s" "$_line"
+    elif [ "$_line_start" = "$_line_end" ]; then
         printf "%s" "$_stdin" | grep -E '^'"${_line}"'($|[[:space:]])' | cut -f 2,3 || return 1
     else
         printf "%s" "$_stdin" | sed -n '/^'"${_line_start}"'$/,/^'"${_line_end}$"'/p' || return 1
@@ -308,7 +314,13 @@ jkanime_episodes() {
         _max_ep="$(printf "%s" "$_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
     fi
     [ -z "$_max_ep" ] && _max_ep=12
-    seq 1 "$_max_ep" | sed 's|.*|\0\t\0|'
+    if [ "$_max_ep" -eq 1 ]; then
+        printf "1\t🎬 Película / Especial (Episodio Único)\n"
+    else
+        seq 1 "$_max_ep" | while read -r _num; do
+            printf "%s\t📺 Episodio %02d\n" "$_num" "$_num"
+        done
+    fi
 }
 
 jkanime_m3u8() {
@@ -738,14 +750,19 @@ case "$source" in
                     episode_maps="$(anidb_episodes "$anime_id")"
                 fi
                 stop_spinner
-                ep_list="$(printf '%s' "$episode_maps" | cut -f 2)"
+                ep_list="$(printf '%s' "$episode_maps" | cut -f 1)"
             fi
 
             if [ -z "$ep_no" ]; then
-                ep_no=$(printf "%s" "$ep_list" | nth "Seleccionar episodio: " "$menu_multi_flag")
+                ep_no=$(printf "%s" "$episode_maps" | nth "Seleccionar episodio: " "$menu_multi_flag")
                 if [ -z "$ep_no" ]; then
                     result=""
                     anime_id=""
+                    _res_count="$(printf "%s\n" "$anime_list" | wc -l | tr -d "[:space:]")"
+                    if [ "$_res_count" -le 1 ]; then
+                        query=""
+                        anime_list=""
+                    fi
                     continue
                 fi
             fi
@@ -778,13 +795,18 @@ case "$source" in
                         play
                         ;;
                     *Seleccionar*)
-                        _new_ep=$(printf "%s" "$ep_list" | nth "Seleccionar episodio: " "$menu_multi_flag")
+                        _new_ep=$(printf "%s" "$episode_maps" | nth "Seleccionar episodio: " "$menu_multi_flag")
                         [ -n "$_new_ep" ] && ep_no="$_new_ep" && play
                         ;;
                     *resultados*)
                         result=""
                         anime_id=""
                         ep_no=""
+                        _res_count="$(printf "%s\n" "$anime_list" | wc -l | tr -d "[:space:]")"
+                        if [ "$_res_count" -le 1 ]; then
+                            query=""
+                            anime_list=""
+                        fi
                         break
                         ;;
                     *Buscar*)
