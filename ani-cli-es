@@ -270,24 +270,21 @@ jkanime_search() {
     _search_page="$(anidb_curl "https://jkanime.net/buscar/${_raw_query}/")"
     _results="$(printf "%s" "$_search_page" | sed 's|&#039;|'\''|g; s|&quot;|"|g; s|&amp;|&|g' | awk '/href="https:\/\/jkanime.net\// { match($0, /href="https:\/\/jkanime.net\/([^\/]+)\/"/, m); if (m[1] != "" && m[1] != "buscar" && m[1] != "directorio" && m[1] != "estrenos" && m[1] != "top" && m[1] != "horario" && m[1] != "comunidad" && m[1] != "aplicacion" && m[1] != "historial" && m[1] != "guardado") slug = m[1] } /<li class="anime">/ { match($0, /<li class="anime">([^<]+)<\/li>/, m); type = m[1] } /<h5><a/ { match($0, /<h5><a[^>]*>([^<]+)<\/a><\/h5>/, m); title = m[1]; if (slug != "" && title != "") { if (type != "") print slug "\t[" type "] " title; else print slug "\t" title; slug=""; type=""; title="" } }' | sort -u)"
     if [ -n "$_results" ]; then
-        _tmp_out="$(mktemp)"
+        _tmp_file="$(mktemp)"
         printf "%s\n" "$_results" | while IFS= read -r _line; do
             [ -z "$_line" ] && continue
             _slug="$(printf "%s" "$_line" | cut -f 1)"
-            _title="$(printf "%s" "$_line" | cut -f 2)"
-            (
-                _yr="$(anidb_curl "https://jkanime.net/${_slug}/" | sed -nE 's|.*<span> *Emitido: *</span>.*([0-9]{4}).*|\1|p' | head -n 1)"
-                [ -z "$_yr" ] && _yr="$(anidb_curl "https://jkanime.net/${_slug}/" | sed -nE 's|.*temporada/[^"]*([0-9]{4}).*|\1|p' | head -n 1)"
-                if [ -n "$_yr" ]; then
-                    printf "%s\t%s (%s)\n" "$_slug" "$_title" "$_yr" >> "$_tmp_out"
-                else
-                    printf "%s\t%s\n" "$_slug" "$_title" >> "$_tmp_out"
-                fi
-            ) &
+            _title="$(printf "%s" "$_line" | cut -f 2-)"
+            _yr="$(anidb_curl "https://jkanime.net/${_slug}/" | sed -nE 's|.*<span> *Emitido: *</span>.*([0-9]{4}).*|\1|p' | head -n 1)"
+            [ -z "$_yr" ] && _yr="$(anidb_curl "https://jkanime.net/${_slug}/" | sed -nE 's|.*temporada/[^"]*([0-9]{4}).*|\1|p' | head -n 1)"
+            if [ -n "$_yr" ]; then
+                printf "%s\t%s (%s)\n" "$_slug" "$_title" "$_yr" >> "$_tmp_file"
+            else
+                printf "%s\t%s\n" "$_slug" "$_title" >> "$_tmp_file"
+            fi
         done
-        wait
-        cat "$_tmp_out"
-        rm -f "$_tmp_out"
+        cat "$_tmp_file"
+        rm -f "$_tmp_file"
     else
         _slug="$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]' | tr '+' '-' | sed 's| +| |g; s| |-|g')"
         _direct_page="$(anidb_curl "https://jkanime.net/${_slug}/")"
