@@ -665,8 +665,9 @@ esac
 # idk where to put this, so I put it here...
 trap 'cleanup; exit 1' INT HUP TERM
 
-# searching
+# searching & main application loop
 print_banner
+
 case "$source" in
     history)
         backup_old_hist
@@ -681,75 +682,134 @@ case "$source" in
         episode_maps="$(anidb_episodes "$anime_id")"
         ep_list="$(printf "%s" "$episode_maps" | cut -f 2)"
         ep_no=$(printf "%s" "$anime_list" | grep "^$anime_id	" | sed -nE 's/.*- episode (.+)$/\1/p')
+        play
         ;;
     *)
-        if [ "$menu_program" = "fzf" ]; then
-            while [ -z "$query" ]; do
-                printf "\33[2K\r\033[1;36mSearch anime: \033[0m" && read -r query
+        while true; do
+            if [ -z "$anime_list" ]; then
+                if [ "$menu_program" = "fzf" ]; then
+                    while [ -z "$query" ]; do
+                        printf "\33[2K\r\033[1;36mBuscar anime: \033[0m" && read -r query
+                    done
+                else
+                    [ -z "$query" ] && query=$(: | menu "Buscar anime: " "" "$menu_extra_flags")
+                    [ -z "$query" ] && exit 0
+                fi
+                # for checking new releases by specifying anime name
+                [ "$source" = "nextep" ] && time_until_next_ep "$query"
+
+                formatted_query=$(printf "%s" "$query" | sed 's| |+|g')
+
+                start_spinner "Buscando anime..."
+                if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
+                    anime_list=$(jkanime_search "$formatted_query")
+                    [ -z "$anime_list" ] && anime_list=$(anidb_search "$formatted_query")
+                else
+                    anime_list=$(anidb_search "$formatted_query")
+                fi
+                stop_spinner
+                if [ -z "$anime_list" ]; then
+                    warn "No se encontraron resultados para: $query"
+                    query=""
+                    continue
+                fi
+            fi
+
+            if [ -z "$result" ]; then
+                if [ "$index" -eq "$index" ] 2>/dev/null; then
+                    result=$(printf "%s" "$anime_list" | sed -n "${index}p")
+                else
+                    result=$(printf "%s" "$anime_list" | nl -w 2 | sed 's/^[[:space:]]//' | nth "Seleccionar anime: ")
+                fi
+                if [ -z "$result" ]; then
+                    query=""
+                    anime_list=""
+                    continue
+                fi
+                anime_title="$(printf "%s" "$result" | cut -f 2)"
+                anime_id="$(printf "%s" "$result" | cut -f 1)"
+
+                start_spinner "Obteniendo lista de episodios..."
+                if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
+                    episode_maps="$(jkanime_episodes "$anime_id")"
+                    [ -z "$episode_maps" ] && episode_maps="$(anidb_episodes "$anime_id")"
+                else
+                    anidb_desc "$anime_id" || true
+                    episode_maps="$(anidb_episodes "$anime_id")"
+                fi
+                stop_spinner
+                ep_list="$(printf '%s' "$episode_maps" | cut -f 2)"
+            fi
+
+            if [ -z "$ep_no" ]; then
+                ep_no=$(printf "%s" "$ep_list" | nth "Seleccionar episodio: " "$menu_multi_flag")
+                if [ -z "$ep_no" ]; then
+                    result=""
+                    anime_id=""
+                    continue
+                fi
+            fi
+
+            # moves the cursor up one line and clears that line
+            tput cuu1 && tput el
+            # stores the position of cursor
+            tput sc
+
+            # playback
+            play
+            [ "$player_function" = "download" ] || [ "$player_function" = "debug" ] && break
+
+            # interactive playback & navigation loop
+            #shellcheck disable=SC2059
+            while cmd=$(printf "⏭️  Siguiente episodio\n🔄 Repetir episodio\n⏮️  Episodio anterior\n📑 Seleccionar episodio\n↩️  Volver a resultados de búsqueda\n🔍 Buscar otro anime$seasons_option\n⚙️  Cambiar calidad\n🚪 Salir" | nth "Reproduciendo episodio $ep_no de $anime_title... "); do
+                case "$cmd" in
+                    *Siguiente*)
+                        ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{n;p;}") 2>/dev/null
+                        [ -z "$ep_no" ] && warn "No hay más episodios siguientes" && ep_no=$(printf "%s" "$ep_list" | tail -n 1)
+                        play
+                        ;;
+                    *Repetir*)
+                        video_link="$replay"
+                        play
+                        ;;
+                    *anterior*)
+                        ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{g;1!p;};h") 2>/dev/null
+                        [ -z "$ep_no" ] && warn "No hay episodios anteriores" && ep_no=$(printf "%s" "$ep_list" | head -n 1)
+                        play
+                        ;;
+                    *Seleccionar*)
+                        _new_ep=$(printf "%s" "$ep_list" | nth "Seleccionar episodio: " "$menu_multi_flag")
+                        [ -n "$_new_ep" ] && ep_no="$_new_ep" && play
+                        ;;
+                    *resultados*)
+                        result=""
+                        anime_id=""
+                        ep_no=""
+                        break
+                        ;;
+                    *Buscar*)
+                        query=""
+                        anime_list=""
+                        result=""
+                        anime_id=""
+                        ep_no=""
+                        break
+                        ;;
+                    *calidad*)
+                        new_quality="$(printf "%s" "$links" | menu "Seleccionar calidad: " "" "$menu_extra_flags" | cut -d ">" -f 1)"
+                        [ -n "$new_quality" ] && select_quality "$new_quality" && play
+                        ;;
+                    *)
+                        cleanup
+                        exit 0
+                        ;;
+                esac
             done
-        else
-            [ -z "$query" ] && query=$(: | menu "Search anime: " "" "$menu_extra_flags")
-            [ -z "$query" ] && exit 1
-        fi
-        # for checking new releases by specifying anime name
-        [ "$source" = "nextep" ] && time_until_next_ep "$query"
 
-        query=$(printf "%s" "$query" | sed 's| |+|g')
-
-        if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
-            anime_list=$(jkanime_search "$query")
-            [ -z "$anime_list" ] && anime_list=$(anidb_search "$query")
-        else
-            anime_list=$(anidb_search "$query")
-        fi
-        [ -z "$anime_list" ] && die "No results found!"
-        [ "$index" -eq "$index" ] 2>/dev/null && result=$(printf "%s" "$anime_list" | sed -n "${index}p")
-        [ -z "$index" ] && result=$(printf "%s" "$anime_list" | nl -w 2 | sed 's/^[[:space:]]//' | nth "Select anime: ")
-        [ -z "$result" ] && die "Invalid anime selection"
-        anime_title="$(printf "%s" "$result" | cut -f 2)"
-        anime_id="$(printf "%s" "$result" | cut -f 1)"
-        if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
-            episode_maps="$(jkanime_episodes "$anime_id")"
-            [ -z "$episode_maps" ] && episode_maps="$(anidb_episodes "$anime_id")"
-        else
-            anidb_desc "$anime_id" || true
-            episode_maps="$(anidb_episodes "$anime_id")"
-        fi
-        ep_list="$(printf '%s' "$episode_maps" | cut -f 2)"
-        [ -z "$ep_no" ] && ep_no=$(printf "%s" "$ep_list" | nth "Select episode: " "$menu_multi_flag")
-        [ -z "$ep_no" ] && die "Invalid episode selection"
+            [ "$player_function" = "download" ] || [ "$player_function" = "debug" ] && break
+        done
         ;;
 esac
-
-# moves the cursor up one line and clears that line
-tput cuu1 && tput el
-# stores the position of cursor
-tput sc
-
-# playback & loop
-play
-[ "$player_function" = "download" ] || [ "$player_function" = "debug" ] && exit 0
-
-#shellcheck disable=SC2059
-while cmd=$(printf "⏭️  Siguiente episodio\n🔄 Repetir episodio\n⏮️  Episodio anterior\n📑 Seleccionar episodio$seasons_option\n⚙️  Cambiar calidad\n🚪 Salir" | nth "Reproduciendo episodio $ep_no de $anime_title... "); do
-    case "$cmd" in
-        *Siguiente*) ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{n;p;}") 2>/dev/null ;;
-        *Repetir*) video_link="$replay" ;;
-        *anterior*) ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{g;1!p;};h") 2>/dev/null ;;
-        *Seleccionar*) ep_no=$(printf "%s" "$ep_list" | nth "Seleccionar episodio: " "$menu_multi_flag") ;;
-        *calidad*)
-            new_quality="$(printf "%s" "$links" | menu "Seleccionar calidad: " "" "$menu_extra_flags" | cut -d ">" -f 1)"
-            [ -z "$new_quality" ] && die "No se seleccionó calidad"
-            select_quality "$new_quality"
-            ;;
-        *)
-            cleanup
-            exit 0
-            ;;
-    esac
-    [ -z "$ep_no" ] && die "Fuera de rango"
-    play
-done
 
 # ani-cli
 #
