@@ -266,25 +266,32 @@ anidb_m3u8() {
 }
 
 jkanime_search() {
-    _raw_query="$(printf "%s" "$1" | tr '+' ' ')"
-    _slug="$(printf "%s" "$_raw_query" | tr '[:upper:]' '[:lower:]' | sed 's| +| |g; s| |-|g')"
-    _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
-    if ! printf "%s" "$_page" | grep -q "404.png"; then
-        _title="$(printf "%s" "$_page" | sed -nE 's|.*<title>([^<]+) - anime.*|\1|p' | head -n 1)"
-        [ -z "$_title" ] && _title="$_slug"
-        printf "%s\t%s\n" "$_slug" "$_title"
+    _raw_query="$(printf "%s" "$1" | sed 's|+|_|g; s| |__|g')"
+    _search_page="$(anidb_curl "https://jkanime.net/buscar/${_raw_query}/")"
+    _results="$(printf "%s" "$_search_page" | sed 's|&#039;|'\''|g; s|&quot;|"|g; s|&amp;|&|g' | awk '/href="https:\/\/jkanime.net\// { match($0, /href="https:\/\/jkanime.net\/([^\/]+)\/"/, m); if (m[1] != "" && m[1] != "buscar" && m[1] != "directorio" && m[1] != "estrenos" && m[1] != "top" && m[1] != "horario" && m[1] != "comunidad" && m[1] != "aplicacion" && m[1] != "historial" && m[1] != "guardado") slug = m[1] } /<li class="anime">/ { match($0, /<li class="anime">([^<]+)<\/li>/, m); type = m[1] } /<h5><a/ { match($0, /<h5><a[^>]*>([^<]+)<\/a><\/h5>/, m); title = m[1]; if (slug != "" && title != "") { if (type != "") print slug "\t[" type "] " title; else print slug "\t" title; slug=""; type=""; title="" } }' | sort -u)"
+    if [ -n "$_results" ]; then
+        printf "%s\n" "$_results"
     else
-        _search_page="$(anidb_curl "https://jkanime.net/buscar/${_raw_query}/1/")"
-        _results="$(printf "%s" "$_search_page" | sed -nE 's|.*href="https://jkanime.net/([^/]+)/".*title="([^"]+)".*|\1\t\2|p' | sort -u)"
-        [ -n "$_results" ] && printf "%s\n" "$_results"
+        _slug="$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]' | tr '+' '-' | sed 's| +| |g; s| |-|g')"
+        _direct_page="$(anidb_curl "https://jkanime.net/${_slug}/")"
+        if ! printf "%s" "$_direct_page" | grep -q "404.png"; then
+            _title="$(printf "%s" "$_direct_page" | sed -nE 's|.*<title>([^<]+) - anime.*|\1|p' | head -n 1)"
+            _type="$(printf "%s" "$_direct_page" | sed -nE 's|.*<span>Tipo:</span> *([^<]+).*|\1|p' | head -n 1)"
+            [ -z "$_title" ] && _title="$_slug"
+            [ -n "$_type" ] && _title="[${_type}] ${_title}"
+            printf "%s\t%s\n" "$_slug" "$_title"
+        fi
     fi
 }
 
 jkanime_episodes() {
     _slug="$1"
     _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
-    _max_ep="$(printf "%s" "$_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
-    [ -z "$_max_ep" ] && _max_ep=1000
+    _max_ep="$(printf "%s" "$_page" | sed -nE 's|.*<span>Episodios:</span> *([0-9]+).*|\1|p' | head -n 1)"
+    if [ -z "$_max_ep" ] || [ "$_max_ep" -eq 0 ]; then
+        _max_ep="$(printf "%s" "$_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
+    fi
+    [ -z "$_max_ep" ] && _max_ep=12
     seq 1 "$_max_ep" | sed 's|.*|\0\t\0|'
 }
 
