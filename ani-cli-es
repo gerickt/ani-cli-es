@@ -75,6 +75,8 @@ help_info() {
         Specify the number of episodes to watch
       --dub
         Play dubbed version
+      -L, --lang
+        Specify language code (e.g. jpn, eng, spa)
       --rofi
         Use rofi instead of fzf for the interactive menu
       --dmenu
@@ -183,15 +185,55 @@ anidb_episodes() {
 # extract the individual m3u8 links from response of embed urls
 anidb_m3u8() {
     _ep_id=$(printf "%s" "$episode_maps" | sed -nE "s|^([0-9]+)\t${1}$|\1|p")
-    _lang="jpn"
-    [ "$2" = "dub" ] && _lang="eng"
+    _lang="${lang:-jpn}"
+    [ "$2" = "dub" ] && _lang="${lang:-eng}"
     #shellcheck disable=SC2059
     _page="$(anidb_curl "$(printf "$m3u8_api" "${_ep_id}")")"
     _embed="$(printf "%s" "$_page" | sed 's|},{|}\n{|g' | sed -nE 's|.*'"${_lang}"'.*embed_url":"([^"]+)".*|\1|p' | sed 's|\\/|/|g' | head -n 1)"
+    if [ -z "$_embed" ] && [ -n "$lang" ]; then
+        _fallback_lang="jpn"
+        [ "$2" = "dub" ] && _fallback_lang="eng"
+        _embed="$(printf "%s" "$_page" | sed 's|},{|}\n{|g' | sed -nE 's|.*'"${_fallback_lang}"'.*embed_url":"([^"]+)".*|\1|p' | sed 's|\\/|/|g' | head -n 1)"
+    fi
     [ -z "$_embed" ] && return 1
     _embed_page="$(anidb_curl "$_embed")"
     _m3u8_master="$(printf "%s" "$_embed_page" | sed -nE "s|.*file: '([^']*)'.*|\1|p" | head -n 1)"
     anidb_curl "${_m3u8_master}" | sed 's|^#EXT-X-STREAM.*x||g; s|,.*|p|g; /^#/d; $!N; s|\n| >|;/EXT-X-I-FRAME/d'
+}
+
+jkanime_search() {
+    _raw_query="$(printf "%s" "$1" | tr '+' ' ')"
+    _slug="$(printf "%s" "$_raw_query" | tr '[:upper:]' '[:lower:]' | sed 's| +| |g; s| |-|g')"
+    _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
+    if ! printf "%s" "$_page" | grep -q "404.png"; then
+        _title="$(printf "%s" "$_page" | sed -nE 's|.*<title>([^<]+) - anime.*|\1|p' | head -n 1)"
+        [ -z "$_title" ] && _title="$_slug"
+        printf "%s\t%s\n" "$_slug" "$_title"
+    else
+        _search_page="$(anidb_curl "https://jkanime.net/buscar/${_raw_query}/1/")"
+        _results="$(printf "%s" "$_search_page" | sed -nE 's|.*href="https://jkanime.net/([^/]+)/".*title="([^"]+)".*|\1\t\2|p' | sort -u)"
+        [ -n "$_results" ] && printf "%s\n" "$_results"
+    fi
+}
+
+jkanime_episodes() {
+    _slug="$1"
+    _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
+    _max_ep="$(printf "%s" "$_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
+    [ -z "$_max_ep" ] && _max_ep=1000
+    seq 1 "$_max_ep" | sed 's|.*|\0\t\0|'
+}
+
+jkanime_m3u8() {
+    _slug="$1"
+    _ep_no="$2"
+    _page="$(anidb_curl "https://jkanime.net/${_slug}/${_ep_no}/")"
+    _embed_url="$(printf "%s" "$_page" | sed -nE "s|.*video\[0\] = '<iframe class=\"player_conte\" src=\"([^\"]+)\".*|\1|p" | head -n 1)"
+    [ -z "$_embed_url" ] && return 1
+    _embed_page="$(anidb_curl "$_embed_url")"
+    _m3u8_master="$(printf "%s" "$_embed_page" | sed -nE "s|.*loadSource\( *'([^']+)'.*|\1|p" | head -n 1)"
+    [ -z "$_m3u8_master" ] && return 1
+    printf "1080p >%s\n" "$_m3u8_master"
 }
 
 # select the quality according to the setting
@@ -208,9 +250,14 @@ select_quality() {
 
 # gets embed url, collects direct links and selects one with desired quality into $episode
 get_video_link() {
-    links=$(anidb_m3u8 "$ep_no" "$mode" | sort -g -r -s)
+    if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
+        links=$(jkanime_m3u8 "$anime_id" "$ep_no" | sort -g -r -s)
+        [ -z "$links" ] && links=$(anidb_m3u8 "$ep_no" "$mode" | sort -g -r -s)
+    else
+        links=$(anidb_m3u8 "$ep_no" "$mode" | sort -g -r -s)
+    fi
     [ -z "$links" ] && die "No sources found for $mode!"
-    info "anidb.app links fetched"
+    info "Links fetched successfully"
     select_quality "$quality"
     # should never trigger but just in case
     if printf "%s" "$ep_list" | grep -q "^$ep_no$"; then
@@ -302,9 +349,10 @@ download() {
 }
 
 play_episode() {
-    [ "$log_episode" = 1 ] && [ "$player_function" != "debug" ] && [ "$player_function" != "download" ] && command -v logger >/dev/null && logger -t ani-cli "${anime_title} ${ep_no}"
+    [ "$log_episode" = 1 ] && [ "$player_function" != "debug" ] && [ "$player_function" != "download" ] && command -v logger >/dev/null && logger -t ani-cli-es "${anime_title} ${ep_no}"
     [ "$skip_intro" = 1 ] && skip_flag="$(ani-skip -i "$mal_id" -e "$canon_ep_no")"
     [ -z "$video_link" ] && get_video_link
+    [ -n "$lang" ] && player_extra_flags="$player_extra_flags --slang=$lang"
     # wait for the previous player to close (in range selection)
     wait
     # shellcheck disable=SC2086
@@ -390,6 +438,7 @@ tls13_ciphers='TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY13
 agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 mode="${ANI_CLI_MODE:-sub}"
+lang="${ANI_CLI_LANG:-spa}"
 download_dir="${ANI_CLI_DOWNLOAD_DIR:-.}"
 log_episode="${ANI_CLI_LOG:-1}"
 quality="${ANI_CLI_QUALITY:-best}"
@@ -423,7 +472,7 @@ if [ ! -t 0 ]; then
     command -v rofi >/dev/null && menu_program=rofi
 fi
 
-hist_dir="${ANI_CLI_HIST_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/ani-cli}"
+hist_dir="${ANI_CLI_HIST_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/ani-cli-es}"
 [ ! -d "$hist_dir" ] && mkdir -p "$hist_dir"
 histfile="$hist_dir/ani-hsts"
 [ ! -f "$histfile" ] && : >"$histfile"
@@ -485,6 +534,11 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --dub) mode="dub" ;;
+        -L | --lang)
+            [ $# -lt 2 ] && die "missing argument!"
+            lang="$2"
+            shift
+            ;;
         --no-detach) no_detach=1 ;;
         --exit-after-play) exit_after_play=1 && no_detach=1 ;;
         --rofi) menu_program=rofi ;;
@@ -552,15 +606,25 @@ case "$source" in
 
         query=$(printf "%s" "$query" | sed 's| |+|g')
 
-        anime_list=$(anidb_search "$query")
+        if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
+            anime_list=$(jkanime_search "$query")
+            [ -z "$anime_list" ] && anime_list=$(anidb_search "$query")
+        else
+            anime_list=$(anidb_search "$query")
+        fi
         [ -z "$anime_list" ] && die "No results found!"
         [ "$index" -eq "$index" ] 2>/dev/null && result=$(printf "%s" "$anime_list" | sed -n "${index}p")
         [ -z "$index" ] && result=$(printf "%s" "$anime_list" | nl -w 2 | sed 's/^[[:space:]]//' | nth "Select anime: ")
         [ -z "$result" ] && die "Invalid anime selection"
         anime_title="$(printf "%s" "$result" | cut -f 2)"
         anime_id="$(printf "%s" "$result" | cut -f 1)"
-        anidb_desc "$anime_id" || true
-        episode_maps="$(anidb_episodes "$anime_id")"
+        if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
+            episode_maps="$(jkanime_episodes "$anime_id")"
+            [ -z "$episode_maps" ] && episode_maps="$(anidb_episodes "$anime_id")"
+        else
+            anidb_desc "$anime_id" || true
+            episode_maps="$(anidb_episodes "$anime_id")"
+        fi
         ep_list="$(printf '%s' "$episode_maps" | cut -f 2)"
         [ -z "$ep_no" ] && ep_no=$(printf "%s" "$ep_list" | nth "Select episode: " "$menu_multi_flag")
         [ -z "$ep_no" ] && die "Invalid episode selection"
