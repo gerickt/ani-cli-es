@@ -17,6 +17,7 @@ Una herramienta CLI para buscar y ver anime subtitulado en español desde tu ter
 ## 📌 Características
 
 - 🇲🇽 🇪🇸 **Soporte Nativo en Español:** Búsqueda y transmisión de anime con subtítulos en español de forma predeterminada.
+- 🎨 **TUI Interactivas & Navegación:** Nueva interfaz con paleta TokyoNight, spinner de carga, y menú de navegación completo (`↩️ Volver a resultados`, `🔍 Buscar otro anime`, `📑 Seleccionar episodio`).
 - ⚡ **Extracción Rápida:** Obtención instantánea de streams HLS (`.m3u8`) directos.
 - 🍿 **Soporte para Múltiples Reproductores:** Funciona nativamente con `mpv`, `vlc`, `iina` y descarga con `yt-dlp` / `ffmpeg`.
 - 🔁 **Fallback Inteligente:** Si un anime no está en fuentes en español, conmuta automáticamente a fuentes originales con soporte para subtítulos externos.
