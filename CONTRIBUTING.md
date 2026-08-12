@@ -1,23 +1,43 @@
-# Contribution Guidelines
+# Guía de Contribución a ani-cli-es 🇲🇽 🇪🇸
 
-## Pull Requests
+¡Gracias por tu interés en contribuir a **ani-cli-es**! Este proyecto nace con el objetivo de brindar la mejor experiencia CLI para ver anime subtitulado y doblado en español para toda la comunidad hispanohablante.
 
-- Appease the linter (run `shfmt -i 4 -ci -d -w ani-cli`)
-- Appease POSIX (run `shellcheck -s sh -o all -e 2250 ani-cli`)
-- Bump the version
-- Adjust the Readme according to your changes (if applicable)
-- No extra dependencies unless absolutely necessary
-- If you're fixing an issue, open an issue as well or link existing one
+---
 
-## Issues
+## 🌟 ¡Todas las contribuciones son bienvenidas!
 
-- Use the issue templates
-- When requesting a feature, check it hasn't been [rejected](https://github.com/pystardust/ani-cli/issues/523) previously
-- Provide screenshot if applicable
+A diferencia del repositorio original, en **ani-cli-es** nos encanta recibir mejoras y nuevas características:
 
-## How else can I help?
+- **Nuevas Fuentes y Scrapers:** Soporte o mejoras para sitios en español (JKAnime, AnimeFLV, MonosChinos, AnimeLatinoHD, etc.).
+- **Compatibilidad de Reproductores:** Mejoras para `mpv`, `VLC`, `IINA`, `yt-dlp` y reproductores en Android / iOS / Steam Deck.
+- **Corrección de Errores y Refactorización:** Arreglos de scraping, optimización de comandos en Shell y regexes.
 
-- Join the [discord](https://discord.gg/aqu7GpqVmR)
-- Take part in troubleshooting and testing
-- Star the repo
-- Follow the maintainers
+---
+
+## 🛠️ Reglas para Pull Requests (PRs)
+
+1. **Estilo de Código:** Ejecuta `shfmt` para mantener la sangría de 4 espacios:
+   ```sh
+   shfmt -i 4 -ci -w ani-cli-es
+   ```
+2. **Validación POSIX:** Asegúrate de que el script no rompa compatibilidad con Shell Estándar usando `shellcheck`:
+   ```sh
+   shellcheck -s sh ani-cli-es
+   ```
+3. **Documentación:** Si tu cambio añade una nueva opción o bandera, actualiza [`README.md`](./README.md) y [`ani-cli-es.1`](./ani-cli-es.1).
+4. **Sin Dependencias Innecesarias:** Priorizamos el uso de herramientas Unix estándar (`curl`, `grep`, `sed`).
+
+---
+
+## 💬 Comunidad y Comunicación
+
+- **Discord:** Actualmente **no contamos con un servidor de Discord**, pero si el interés y la comunidad crecen, ¡abriremos uno oficialmente!
+- **Discusiones e Issues:** Por el momento, puedes reportar errores, proponer ideas o hacer preguntas abriendo un **Issue** o **Discussion** en GitHub.
+
+---
+
+## 📢 OTRAS FORMAS DE AYUDAR
+
+- Dale una ⭐ **Star** al repositorio en GitHub para apoyar el proyecto.
+- Comparte **ani-cli-es** con tus amigos y la comunidad anime.
+- Ayuda a probar nuevos episodios y reportar fuentes caídas.
