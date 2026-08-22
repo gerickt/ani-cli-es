@@ -3,24 +3,28 @@
 </h1>
 
 <h3 align="center">
-Una herramienta CLI para buscar y ver anime subtitulado en español desde tu terminal.
+Tu experiencia de anime en español definitiva desde la terminal.
 </h3>
 
 <p align="center">
-  <a href="#instalación"><img src="https://img.shields.io/badge/instalación-rápida-brightgreen"></a>
-  <a href="#uso"><img src="https://img.shields.io/badge/uso-fácil-blue"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-GPLv3-red"></a>
+  <a href="#instalación"><img src="https://img.shields.io/badge/versión-v5.1.0--es-purple?style=for-the-badge"></a>
+  <a href="#instalación"><img src="https://img.shields.io/badge/instalación-rápida-brightgreen?style=for-the-badge"></a>
+  <a href="#uso"><img src="https://img.shields.io/badge/uso-fácil-blue?style=for-the-badge"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-GPLv3-red?style=for-the-badge"></a>
 </p>
 
 ---
 
-## 📌 Características
+## 📌 Características Principales
 
-- 🇲🇽 🇪🇸 **Soporte Nativo en Español:** Búsqueda y transmisión de anime con subtítulos en español de forma predeterminada.
-- 🎨 **TUI Interactivas & Navegación:** Nueva interfaz con paleta TokyoNight, spinner de carga, y menú de navegación completo (`↩️ Volver a resultados`, `🔍 Buscar otro anime`, `📑 Seleccionar episodio`).
-- ⚡ **Extracción Rápida:** Obtención instantánea de streams HLS (`.m3u8`) directos.
-- 🍿 **Soporte para Múltiples Reproductores:** Funciona nativamente con `mpv`, `vlc`, `iina` y descarga con `yt-dlp` / `ffmpeg`.
-- 🔁 **Fallback Inteligente:** Si un anime no está en fuentes en español, conmuta automáticamente a fuentes originales con soporte para subtítulos externos.
+- 🇲🇽 🇪🇸 **100% Nativo en Español:** Búsqueda, extracción y transmisión instantánea de anime con subtítulos en español y audio latino.
+- 🎨 **TUI Riced & Moderna:** Nueva interfaz con paleta TokyoNight, bordes redondeados y soporte para renderizado de pósters en terminal con **`chafa`**.
+- 🌟 **Cartelera de Estrenos en Vivo (`-E` / `--estrenos`):** Consulta directa de los episodios emitidos hoy, ayer y esta semana.
+- 🏷️ **Explorador por Géneros y Categorías (`-G` / `--generos`):** Navega por más de 30 categorías (Isekai, Shonen, Seinen, Romance, etc.).
+- 🕒 **Historial TUI Robusto (`-c` / `--continue`):** Menú interactivo para continuar donde lo dejaste, seleccionar episodios o volver a ver.
+- 📂 **Biblioteca Offline (`-B` / `--biblioteca`):** Explora y reproduce tus episodios descargados localmente sin conexión a internet.
+- ⚡ **Extracción Multi-Servidor:** Soporte para failover automático de servidores (HLS `.m3u8` y `.mp4`).
+- 🍿 **Multiplataforma y Múltiples Reproductores:** Compatible con `mpv` (con auto-resume), `vlc`, `iina`, `rofi`, `dmenu` y descarga con `yt-dlp` / `ffmpeg`.
 
 ---
 
@@ -28,49 +32,46 @@ Una herramienta CLI para buscar y ver anime subtitulado en español desde tu ter
 
 ### Requisitos previos
 Asegúrate de tener instalados en tu sistema:
-* `curl`
-* `grep`
-* `sed`
-* `fzf` (o `rofi` / `dmenu`)
-* `mpv` (o `vlc` / `iina`)
+* **Obligatorios**: `curl`, `grep`, `sed`, `fzf` (o `rofi` / `dmenu`), `mpv` (o `vlc` / `iina`).
+* **Recomendado (Pósters en Terminal)**: `chafa` (`sudo pacman -S chafa` / `sudo apt install chafa` / `brew install chafa`).
+* **Descargas**: `yt-dlp` o `ffmpeg`.
 
-### Desde el código fuente (Cualquier sistema Linux / macOS)
+### Instalación Rápida (Linux / macOS)
 
 ```sh
 # 1. Clonar el repositorio
 git clone https://github.com/gerickt/ani-cli-es.git
-
-# 2. Copiar el ejecutable a /usr/local/bin
 cd ani-cli-es
+
+# 2. Instalar ejecutable y manual
 sudo cp ani-cli-es /usr/local/bin/
 sudo cp ani-cli-es.1 /usr/local/share/man/man1/ 2>/dev/null || true
-
-# 3. Limpiar carpeta temporal
-cd .. && rm -rf ani-cli-es
 ```
 
 ---
 
 ## 🎮 Uso
 
-### Búsqueda Interactiva
-Simplemente escribe `ani-cli-es` seguido del nombre del anime:
+### Hub Interactivo
+Si ejecutas el comando sin argumentos, se abrirá el nuevo **Hub Principal de Navegación**:
 
 ```sh
-ani-cli-es "one piece"
+ani-cli-es
 ```
 
-### Opciones Comunes
+### Opciones y Atajos
 
 | Comando | Descripción |
 | :--- | :--- |
 | `ani-cli-es "anime"` | Búsqueda e interfaz interactiva con `fzf` |
+| `ani-cli-es -E` | Abre la cartelera de estrenos de la semana |
+| `ani-cli-es -G` | Abre el explorador por géneros y categorías |
+| `ani-cli-es -B` | Abre la biblioteca de descargas offline |
+| `ani-cli-es -c` | Abre el menú interactivo de historial |
 | `ani-cli-es -e 1 "cyberpunk edgerunners"` | Reproduce directamente el episodio 1 |
 | `ani-cli-es -e "1-5" "naruto"` | Reproduce en maratón los episodios 1 al 5 |
-| `ani-cli-es -d -e 1 "blue lock"` | Descarga el episodio en lugar de reproducirlo |
-| `ani-cli-es -c` | Continúa viendo desde tu historial de reproducción |
-| `ani-cli-es --vlc "dragon ball"` | Utiliza VLC como reproductor en lugar de MPV |
-| `ani-cli-es -L eng "anime"` | Fuerza la búsqueda en inglés |
+| `ani-cli-es -d -e 1 "solo leveling"` | Descarga el episodio en disco |
+| `ani-cli-es --preview "slug"` | Muestra ficha técnica y póster del anime |
 
 ---
 
@@ -79,15 +80,18 @@ ani-cli-es "one piece"
 El historial de reproducción se guarda automáticamente en:
 `~/.local/state/ani-cli-es/ani-hsts`
 
-Puedes usar las siguientes variables de entorno:
-* `ANI_CLI_PLAYER`: Cambia el reproductor por defecto (`mpv`, `vlc`, `iina`).
-* `ANI_CLI_QUALITY`: Cambia la calidad preferida (`best`, `1080p`, `720p`, `worst`).
-* `ANI_CLI_LANG`: Cambia el idioma preferido (`spa`, `jpn`, `eng`).
+Las carátulas cacheadas se almacenan en:
+`~/.cache/ani-cli-es/covers/`
+
+Variables de entorno configurables:
+* `ANI_CLI_PLAYER`: Cambia el reproductor (`mpv`, `vlc`, `iina`).
+* `ANI_CLI_QUALITY`: Cambia la calidad (`best`, `1080p`, `720p`, `worst`).
+* `ANI_CLI_DOWNLOAD_DIR`: Directorio destino de descargas (por defecto `.`).
+* `ANI_CLI_MENU`: Programa de menú (`fzf`, `rofi`, `dmenu`).
 
 ---
 
 ## 🤝 Créditos y Licencia
 
-Este proyecto es un fork enfocado en la comunidad hispanohablante basado en el trabajo original de [pystardust/ani-cli](https://github.com/pystardust/ani-cli).
-
-Licencia bajo la versión 3 de la [GNU General Public License (GPLv3)](LICENSE).
+Basado originalmente en el proyecto [pystardust/ani-cli](https://github.com/pystardust/ani-cli).
+Distribuido bajo licencia [GNU General Public License v3.0 (GPLv3)](LICENSE).

@@ -9,7 +9,7 @@ A shell script to browse and search anime from the command-line.
 .PD 0
 .P
 .PD
-This tool scrapes the site anidb.
+This tool scrapes the site jkanime.net.
 .PD 0
 .P
 .PD
@@ -19,8 +19,20 @@ This tool scrapes the site anidb.
 \fB\-e | --episode | -r | --range\fR \fI\,<episode>\/\fR
 Specify the episode numbers to watch. If range is specified it should be quoted or separated by a non-numeric character (eg. -).
 .TP
+\fB\-E | --estrenos\fR
+Browse and play latest airing episodes and weekly schedule.
+.TP
+\fB\-G | --generos\fR
+Explore anime by genres and categories (Isekai, Shonen, Seinen, Romance, etc.).
+.TP
+\fB\-B | --biblioteca\fR
+Browse and play local downloaded episodes offline without internet connection.
+.TP
 \fB\-c | --continue\fR
-Continue watching anime from history.
+Interactive TUI to continue watching from history.
+.TP
+\fB\--preview\fR \fI\,<slug>\/\fR
+Show poster image render and full synopsis / metadata for an anime.
 .TP
 \fB\-d | --download\fR
 Download episode.
@@ -85,7 +97,7 @@ Controls the scraped media's mode, valid options are sub or dub. Default is sub.
 Controls the directory where files are downloaded. Default is the current dir.
 .TP
 \fBANI_CLI_QUALITY\fR
-Controls the scraped media's quality, check anidb for valid options or set to worst/best. Default is best.
+Controls the scraped media's quality, check jkanime for valid options or set to worst/best. Default is best.
 .TP
 \fBANI_CLI_PLAYER\fR
 Sets the player ani-cli uses. Can be debug (print links), download (equivalent to -d), android_mpv (apk and am start), android_vlc (apk and am start), catt (for streaming to tv), or any player that can play urls. For defaults see working without arguments.

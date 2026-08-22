@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version_number="5.0.2-es"
+version_number="5.1.0-es"
 
 # UI Tokens & Palette (TokyoNight Theme)
 RESET="\033[0m"
@@ -15,24 +15,25 @@ C_GRAY="\033[38;2;86;95;137m"
 
 print_banner() {
     [ "$menu_program" = "fzf" ] || return 0
-    printf "${C_PURPLE}  █████  ███    ██ ██${RESET}\n"
-    printf "${C_PURPLE} ██   ██ ████   ██ ██${RESET}\n"
-    printf "${C_PURPLE} ███████ ██ ██  ██ ██${RESET}\n"
-    printf "${C_PURPLE} ██   ██ ██  ██ ██ ██${RESET}\n"
-    printf "${C_PURPLE} ██   ██ ██   ████ ██${RESET}\n"
-    printf "${C_BLUE} ─── C L I   E S ────────────────────────${RESET}\n"
-    printf "${C_GRAY} anime subtitulado en español ${C_GREEN}v%s${RESET}\n\n" "$version_number"
+    printf "${C_BLUE}╭──────────────────────────────────────────────────────────╮${RESET}\n"
+    printf "${C_BLUE}│${C_PURPLE}   //┏━━┓\\\\   ┏━┓  ┏━┓ ┏━━━┓     //┏━━━┓\\\\  ┏━┓     ┏━━━┓   ${C_BLUE}│${RESET}\n"
+    printf "${C_BLUE}│${C_PURPLE}  ┏━━┛  ┗━━┓ ┏┛ ┗━┓┃ ┃ ┗━┓ ┏━┛   ┏━━┛   ┗━━┓ ┃ ┃     ┗━┓ ┏━┛  ${C_BLUE}│${RESET}\n"
+    printf "${C_BLUE}│${C_PURPLE}  ┃  ┏━━┓ ┃ ┃ ┏┓ ┃┃ ┃   ┃ ┃     ┃ ┏━━━━━━━┛ ┃ ┃       ┃ ┃    ${C_BLUE}│${RESET}\n"
+    printf "${C_BLUE}│${C_PURPLE}  ┗━━┛  ┗━━┛ ┗━┛┗━┛┗━┛ ┏━┛ ┗━┓   ┗━┛         ┗━┻━━━━━┓┏━┛ ┗━┓  ${C_BLUE}│${RESET}\n"
+    printf "${C_BLUE}◄══════════════════════════════════════════════════════════►${RESET}\n"
+    printf "${C_BLUE}        ◄═══════[  ${C_RED}${BOLD}アニメ CLI${RESET}${C_BLUE} • ${C_GREEN}v%s${RESET}${C_BLUE}  ]═══════►        ${RESET}\n" "$version_number"
+    printf "${C_BLUE}╰──────────────────────────────────────────────────────────╯${RESET}\n\n"
 }
 
 # POSIX Non-blocking Spinner
 start_spinner() {
-    [ -t 1 ] || return 0
+    [ -t 2 ] || return 0
     _msg="${1:-Cargando...}"
     (
         set -- "⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏"
         while true; do
             for f in "$@"; do
-                printf "\r\33[2K${C_PURPLE}%s${RESET} ${C_BLUE}%s${RESET}" "$f" "$_msg"
+                printf "\r\33[2K${C_PURPLE}%s${RESET} ${C_BLUE}%s${RESET}" "$f" "$_msg" >&2
                 sleep 0.08
             done
         done
@@ -42,7 +43,7 @@ start_spinner() {
 
 stop_spinner() {
     [ -n "$SPINNER_PID" ] && kill "$SPINNER_PID" 2>/dev/null && wait "$SPINNER_PID" 2>/dev/null && unset SPINNER_PID
-    printf "\r\33[2K"
+    printf "\r\33[2K" >&2
 }
 
 # shellcheck disable=SC2086
@@ -50,16 +51,18 @@ stop_spinner() {
 menu() {
     case "$menu_program" in
         fzf)
-            fzf --layout=reverse --height=75% --border=rounded \
-                --border-label=" 🍿 ani-cli-es " \
+            eval "fzf --layout=reverse --height=90% --border=rounded \
+                --border-label=\" ◄═══[ アニメ ani-cli-es • v${version_number} ]═══► \" \
                 --border-label-pos=3 \
-                --prompt="🔍 $1" \
-                --pointer="❯ " \
-                --marker="✔ " \
-                --color="bg+:#292e42,bg:#1a1b26,spinner:#9ece6a,hl:#7dcfff" \
-                --color="fg:#c0caf5,header:#bb9af7,info:#7aa2f7,pointer:#7dcfff" \
-                --color="marker:#9ece6a,prompt:#7dcfff,border:#7dcfff,label:#7dcfff" \
-                $2 $3
+                --prompt=\"► $1 \" \
+                --pointer=\"▶ \" \
+                --marker=\"★ \" \
+                --header=\"◄ Esc: Salir | Tab: Marcar | Enter: Ejecutar ►\" \
+                --header-first \
+                --color=\"bg+:#24283b,bg:#1a1b26,spinner:#7dcfff,hl:#bb9af7\" \
+                --color=\"fg:#c0caf5,header:#7aa2f7,info:#9ece6a,pointer:#bb9af7\" \
+                --color=\"marker:#f7768e,prompt:#7dcfff,border:#7aa2f7,label:#bb9af7\" \
+                $2 $3"
             ;;
         rofi) rofi -sort -dmenu -i -p "$1" $2 $3 ;;
         dmenu) dmenu -l 20 -p "$1" $3 ;;
@@ -73,22 +76,30 @@ nth() {
     [ -z "$_stdin" ] && return 1
     if [ -n "$index" ]; then
         _line_count="$(printf "%s\n" "$_stdin" | wc -l | tr -d "[:space:]")"
-        [ "$_line_count" -eq 1 ] && printf "%s" "$_stdin" | cut -f 2,3 && return 0
+        [ "$_line_count" -eq 1 ] && printf "%s" "$_stdin" && return 0
     fi
     _prompt="$1"
     [ $# -ne 1 ] && _multi_flag="$2"
-    _line=$(printf "%s" "$_stdin" | cut -f 1,3 | tr '\t' ' ' | menu "$_prompt" "$_multi_flag" "$menu_extra_flags" | cut -d " " -f 1)
-    _line_start=$(printf "%s" "$_line" | head -n 1)
-    _line_end=$(printf "%s" "$_line" | tail -n 1)
-    [ -n "$_line" ] || return 1
 
     _cols="$(printf "%s\n" "$_stdin" | head -n 1 | awk -F'\t' '{print NF}')"
+    _sample_col1="$(printf "%s\n" "$_stdin" | head -n 1 | cut -f 1)"
+    _extra_flags="$menu_extra_flags"
+
     if [ "$_cols" -eq 2 ]; then
-        printf "%s" "$_line"
-    elif [ "$_line_start" = "$_line_end" ]; then
-        printf "%s" "$_stdin" | grep -E '^'"${_line}"'($|[[:space:]])' | cut -f 2,3 || return 1
+        if printf "%s" "$_sample_col1" | grep -qE '^[0-9]+$'; then
+            _extra_flags="--delimiter='\t' --with-nth=2 $_extra_flags"
+        else
+            _extra_flags="--delimiter='\t' --with-nth=2 --preview='$0 --preview {1}' --preview-window=right:52%:border-rounded:wrap:sharp $_extra_flags"
+        fi
+    fi
+
+    _selected=$(printf "%s" "$_stdin" | menu "$_prompt" "$_multi_flag" "$_extra_flags")
+    [ -z "$_selected" ] && return 1
+
+    if printf "%s" "$_sample_col1" | grep -qE '^[0-9]+$'; then
+        printf "%s" "$_selected" | cut -f 1
     else
-        printf "%s" "$_stdin" | sed -n '/^'"${_line_start}"'$/,/^'"${_line_end}$"'/p' || return 1
+        printf "%s" "$_selected"
     fi
 }
 
@@ -121,54 +132,62 @@ help_info() {
     %s [options] [query] [options]
 
     Options:
+      -E, --estrenos
+        Ver cartelera de estrenos de hoy y recientes
+      -G, --generos
+        Explorar animes por generos y categorias
+      -B, --biblioteca
+        Explorar y reproducir descargas locales offline
       -c, --continue
-        Continue watching from history
+        Ver historial interactivo y continuar viendo
       -d, --download
-        Download the video instead of playing it
+        Descargar episodio en lugar de reproducirlo
       -D, --delete
-        Delete history
+        Borrar historial de reproduccion
       -l, --logview
-        Show logs
+        Ver registros de logs
       -s, --syncplay
-        Use Syncplay to watch with friends
+        Usar Syncplay para ver en sincronia con amigos
       -S, --select-nth
-        Select nth entry
+        Seleccionar automaticamente la opcion n-esima
       -q, --quality
-        Specify the video quality
+        Especificar calidad de video (best, 1080p, 720p, 480p, worst)
       -v, --vlc
-        Use VLC to play the video
+        Usar VLC como reproductor de medios
       -V, --version
-        Show the version of the script
+        Mostrar version del script
       -h, --help
-        Show this help message and exit
+        Mostrar este mensaje de ayuda y salir
       -e, --episode, -r, --range
-        Specify the number of episodes to watch
+        Especificar numero de episodio o rango a reproducir
+      --preview
+        Mostrar ficha tecnica y poster de un anime
       --dub
-        Play dubbed version
+        Reproducir version doblada al latino si esta disponible
       -L, --lang
-        Specify language code (e.g. jpn, eng, spa)
+        Especificar codigo de idioma (spa, jpn, eng)
       --rofi
-        Use rofi instead of fzf for the interactive menu
+        Usar rofi en lugar de fzf para menus interactivos
       --dmenu
-        Use dmenu instead of fzf for the interactive menu
+        Usar dmenu en lugar de fzf para menus interactivos
       --skip
-        Use ani-skip to skip the intro of the episode (mpv only)
+        Usar ani-skip para saltar la intro del episodio (mpv)
       --no-detach
-        Don't detach the player (useful for in-terminal playback, mpv only)
+        No desacoplar el reproductor de la terminal (mpv)
       --exit-after-play
-        Exit the player, and return the player exit code (useful for non interactive scenarios)
-      -N, --nextep-countdown
-        Display a countdown to the next episode
+        Salir del reproductor y retornar codigo de salida (mpv)
       -U, --update
-        Update the script
+        Actualizar script desde GitHub
     Some example usages:
-      %s -q 720p banana fish
-      %s --skip -S 2 one piece
+      %s -E
+      %s -G
+      %s -B
+      %s -c
+      %s -q 1080p solo leveling
+      %s --skip -S 1 one piece
       %s -d -e 2 cyberpunk edgerunners
-      %s --vlc cyberpunk edgerunners -q 1080p -e 4
-      %s blue lock -e 5-6
-      %s -e \"5 6\" blue lock
-    \n" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}"
+      %s -e 1-5 naruto
+    \n" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}" "${0##*/}"
     exit 0
 }
 
@@ -220,105 +239,338 @@ cleanup() {
 
 # SCRAPING
 
+# SCRAPING
+
 #shellcheck disable=SC2086
 anidb_curl() {
     $curl_exe -sL -A "$agent" --max-time 10 $cipher_flag "$@"
 }
 
-# search the query and give results. format is (id \t name)
-anidb_search() {
-    #shellcheck disable=SC2059
-    _page="$(anidb_curl "$(printf "$search_api" "$1")" | tr '\n' ' ' | sed 's|<a href|\n<a href|g')"
-    if printf "%s" "$_page" | grep -qi "Just a moment"; then
-        [ "$curl_exe" = "curl" ] && die "Blocked by cloudflare. Try installing curl-impersonate"
-        die "Blocked by cloudflare."
+clean_html() {
+    if [ $# -gt 0 ]; then
+        printf "%s" "$1" | sed -e 's|&amp;|\&|g' -e 's|&quot;|"|g' -e "s|&#039;|'|g" -e 's|&lt;|<|g' -e 's|&gt;|>|g'
+    else
+        sed -e 's|&amp;|\&|g' -e 's|&quot;|"|g' -e "s|&#039;|'|g" -e 's|&lt;|<|g' -e 's|&gt;|>|g'
     fi
-    printf "%s" "$_page" | sed -nE 's|.*anime/([a-z0-9-]+-[0-9]+)".*alt="([^"]+)".*|\1\t\2|p' | sed -e "s|&#039;|'|g" -e 's|&quot;|"|g'
 }
 
-# extract mal_id and seasons metadata
-anidb_desc() {
-    #shellcheck disable=SC2059
-    _page="$(anidb_curl "$(printf "$desc_api" "$1")" | tr '\n' ' ' | sed 's|<a href|\n<a href|g')"
-    mal_id="$(printf "%s" "$_page" | sed -nE 's|.*https://myanimelist.net/anime/([0-9]+)/.*|\1|p')"
-    seasons="$(printf "%s" "$_page" | sed -n '/>Seasons</,/>Details</p' | sed -nE 's|.*anime/([^"]+-[0-9]+)"[^>]*title="([^"]+)".*|\1\t\2|p' | sed -e "s|&#039;|'|g")"
-    [ -n "$seasons" ] && seasons_option="\nchange_season"
+# extract related seasons and sequels from jkanime page
+jkanime_desc() {
+    _slug="$1"
+    _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
+    [ -z "$_page" ] && return 0
+    seasons="$(printf "%s" "$_page" | sed -n "/Temporadas y relacionados/,/<\/div>/p" | sed -nE "s|.*href=\"https://jkanime.net/([a-z0-9-]+)/\">([^<]+)<.*|\1\t\2|p" | clean_html | sort -u)"
+    [ -n "$seasons" ] && seasons_option="\n🔁  Cambiar temporada / Relacionados"
 }
 
-# get the episodes list of the selected anime. format is (id \t ep_no)
-anidb_episodes() {
-    #shellcheck disable=SC2059
-    _page="$(anidb_curl "$(printf "$episodes_api" "${1##*-}")")"
-    printf "%s" "$_page" | sed 's|},{|}\n{|g' | sed -nE 's|.*"id":([0-9]+).*"number":([0-9]+).*|\1\t\2|p'
-}
+jkanime_preview() {
+    _slug="$(printf "%s" "$1" | cut -d ':' -f 1 | awk '{print $1}')"
+    [ -z "$_slug" ] && return 0
+    _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
+    [ -z "$_page" ] && return 0
 
-# extract the individual m3u8 links from response of embed urls
-anidb_m3u8() {
-    _ep_id=$(printf "%s" "$episode_maps" | sed -nE "s|^([0-9]+)\t${1}$|\1|p")
-    _lang="${lang:-jpn}"
-    [ "$2" = "dub" ] && _lang="${lang:-eng}"
-    #shellcheck disable=SC2059
-    _page="$(anidb_curl "$(printf "$m3u8_api" "${_ep_id}")")"
-    _embed="$(printf "%s" "$_page" | sed 's|},{|}\n{|g' | sed -nE 's|.*'"${_lang}"'.*embed_url":"([^"]+)".*|\1|p' | sed 's|\\/|/|g' | head -n 1)"
-    if [ -z "$_embed" ] && [ -n "$lang" ]; then
-        _fallback_lang="jpn"
-        [ "$2" = "dub" ] && _fallback_lang="eng"
-        _embed="$(printf "%s" "$_page" | sed 's|},{|}\n{|g' | sed -nE 's|.*'"${_fallback_lang}"'.*embed_url":"([^"]+)".*|\1|p' | sed 's|\\/|/|g' | head -n 1)"
+    _title="$(clean_html "$(printf "%s" "$_page" | sed -nE 's|.*<title>([^<]+) - anime.*|\1|p' | head -n 1)")"
+    _type="$(clean_html "$(printf "%s" "$_page" | sed -nE 's|.*<span>Tipo:</span> *([^<]+).*|\1|p' | head -n 1)")"
+    _status="$(clean_html "$(printf "%s" "$_page" | sed -nE 's|.*<span>Estado:</span> *<div[^>]*>([^<]+).*|\1|p' | head -n 1)")"
+    _yr="$(printf "%s" "$_page" | sed -nE 's|.*<span> *Emitido: *</span>.*([0-9]{4}).*|\1|p' | head -n 1)"
+    [ -z "$_yr" ] && _yr="$(printf "%s" "$_page" | sed -nE 's|.*temporada/[^"]*([0-9]{4}).*|\1|p' | head -n 1)"
+    _eps="$(printf "%s" "$_page" | sed -nE 's|.*<span>Episodios:</span> *([0-9]+).*|\1|p' | head -n 1)"
+    if [ -z "$_eps" ] || [ "$_eps" -eq 0 ]; then
+        _eps="$(printf "%s" "$_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
+        [ -n "$_eps" ] && [ "$_status" = "En emision" ] && _eps="${_eps}+"
     fi
-    [ -z "$_embed" ] && return 1
-    _embed_page="$(anidb_curl "$_embed")"
-    _m3u8_master="$(printf "%s" "$_embed_page" | sed -nE "s|.*file: '([^']*)'.*|\1|p" | head -n 1)"
-    anidb_curl "${_m3u8_master}" | sed 's|^#EXT-X-STREAM.*x||g; s|,.*|p|g; /^#/d; $!N; s|\n| >|;/EXT-X-I-FRAME/d'
+    _duration="$(clean_html "$(printf "%s" "$_page" | sed -nE 's|.*<span>Duracion:</span> *([^<]+).*|\1|p' | head -n 1)")"
+    _studio="$(clean_html "$(printf "%s" "$_page" | sed -nE 's|.*studio/[^"]*">([^<]+)<.*|\1|p' | head -n 1)")"
+    _langs="$(clean_html "$(printf "%s" "$_page" | sed -nE 's|.*<span>Idiomas:</span>([^<]+).*|\1|p' | head -n 1 | tr -d '\n\r' | sed 's|  *| |g')")"
+    _genres="$(clean_html "$(printf "%s" "$_page" | grep -oE 'genero/[^/]+/">[^<]+' | cut -d '>' -f 2 | sort -u | tr '\n' ',' | sed 's|,$||; s|,|, |g')")"
+    _synopsis="$(clean_html "$(printf "%s" "$_page" | sed -nE 's|.*<p class="scroll">([^<]+)</p>.*|\1|p' | head -n 1)")"
+
+    _cover_dir="${XDG_CACHE_HOME:-$HOME/.cache}/ani-cli-es/covers"
+    mkdir -p "$_cover_dir" 2>/dev/null || true
+    _cover_file="$_cover_dir/${_slug}.jpg"
+    if [ ! -f "$_cover_file" ] || [ ! -s "$_cover_file" ]; then
+        curl -sL --max-time 3 "https://cdn.jkdesa.com/assets/images/animes/image/${_slug}.jpg" -o "$_cover_file" 2>/dev/null || true
+    fi
+
+    if [ "${ANI_CLI_NO_POSTER:-0}" != "1" ] && command -v chafa >/dev/null 2>&1 && [ -s "$_cover_file" ]; then
+        if [ -n "$KITTY_PID" ] || [ "$TERM" = "xterm-kitty" ]; then
+            chafa --format kitty --size 46x24 "$_cover_file" 2>/dev/null || true
+        else
+            _chafa_flags="${ANI_CLI_CHAFA_FLAGS:---format symbols --symbols sextant+quad+vhalf+block+diagonal+wedge --size 46x24 --color-space din99d --color-extractor median -w 9}"
+            # shellcheck disable=SC2086
+            chafa $_chafa_flags "$_cover_file" 2>/dev/null || chafa --format symbols --symbols vhalf --size 40x18 "$_cover_file" 2>/dev/null || true
+        fi
+        printf "${C_BLUE}◄═══════════════════════════════════════════════►${RESET}\n"
+    fi
+
+    printf "${C_PURPLE}╭─ 🍿 ANIME DECK ───────────────────────────────╮${RESET}\n"
+    printf "│ \033[38;2;125;207;255m✦ ${BOLD}%s${RESET} ${DIM}(%s)${RESET}\n" "${_title:-$_slug}" "${_yr:-N/A}"
+    printf "${C_BLUE}◄═══════════════════════════════════════════════►${RESET}\n"
+    [ -n "$_type" ] && printf "│ ${BOLD}📌 Formato:${RESET}    [ %s ]\n" "$_type"
+    [ -n "$_eps" ] && printf "│ ${BOLD}📺 Episodios:${RESET}  %s eps ${DIM}(%s)${RESET}\n" "$_eps" "${_duration:-24 min}"
+    [ -n "$_status" ] && printf "│ ${BOLD}⚡ Estado:${RESET}     ${C_GREEN}● %s${RESET}\n" "$_status"
+    [ -n "$_studio" ] && printf "│ ${BOLD}🎬 Estudio:${RESET}    %s\n" "$_studio"
+    [ -n "$_langs" ] && printf "│ ${BOLD}🇲🇽 Idiomas:${RESET}    %s\n" "$_langs"
+    [ -n "$_genres" ] && printf "│ ${BOLD}🏷️ Géneros:${RESET}    %s\n" "$(printf "%s" "$_genres" | fold -s -w 42)"
+    printf "${C_PURPLE}╰───────────────────────────────────────────────╯${RESET}\n"
+    if [ -n "$_synopsis" ]; then
+        printf "${C_BLUE}╭─ 📝 SINOPSIS ─────────────────────────────────╮${RESET}\n"
+        printf "%s\n" "$_synopsis" | fold -s -w 44 | while IFS= read -r _sline; do
+            printf "│ %s\n" "$_sline"
+        done
+        printf "${C_BLUE}╰───────────────────────────────────────────────╯${RESET}\n"
+    fi
 }
 
 jkanime_search() {
-    _raw_query="$(printf "%s" "$1" | sed 's|+|_|g; s| |__|g')"
+    _raw_query="$(printf "%s" "$1" | sed 's|+|_|g; s| |_|g')"
     _search_page="$(anidb_curl "https://jkanime.net/buscar/${_raw_query}/")"
-    _results="$(printf "%s" "$_search_page" | sed 's|&#039;|'\''|g; s|&quot;|"|g; s|&amp;|&|g' | awk '/href="https:\/\/jkanime.net\// { match($0, /href="https:\/\/jkanime.net\/([^\/]+)\/"/, m); if (m[1] != "" && m[1] != "buscar" && m[1] != "directorio" && m[1] != "estrenos" && m[1] != "top" && m[1] != "horario" && m[1] != "comunidad" && m[1] != "aplicacion" && m[1] != "historial" && m[1] != "guardado") slug = m[1] } /<li class="anime">/ { match($0, /<li class="anime">([^<]+)<\/li>/, m); type = m[1] } /<h5><a/ { match($0, /<h5><a[^>]*>([^<]+)<\/a><\/h5>/, m); title = m[1]; if (slug != "" && title != "") { if (type != "") print slug "\t[" type "] " title; else print slug "\t" title; slug=""; type=""; title="" } }' | sort -u)"
-    if [ -n "$_results" ]; then
-        _tmp_file="$(mktemp)"
-        printf "%s\n" "$_results" | while IFS= read -r _line; do
+    
+    _tmp_dir="$(mktemp -d)"
+    _res_file="$_tmp_dir/results.txt"
+
+    printf "%s" "$_search_page" | awk '
+    BEGIN { RS="<div class=\"anime__item\">"; FS="\n" }
+    NR > 1 {
+        slug=""; type=""; title=""
+        for (i=1; i<=NF; i++) {
+            if ($i ~ /href="https:\/\/jkanime.net\/[^\/]+\/"/ && slug == "") {
+                match($i, /href="https:\/\/jkanime.net\/([^\/]+)\/"/, m)
+                if (m[1] != "buscar" && m[1] != "directorio" && m[1] != "historial" && m[1] != "guardado" && m[1] != "estrenos" && m[1] != "top") slug = m[1]
+            }
+            if ($i ~ /<li class="anime">/) {
+                match($i, /<li class="anime">([^<]+)<\/li>/, m)
+                type = m[1]
+            }
+            if ($i ~ /<h5><a/) {
+                match($i, /<h5><a[^>]*>([^<]+)<\/a><\/h5>/, m)
+                title = m[1]
+            }
+        }
+        if (slug != "" && title != "") {
+            if (type != "") print slug "\t[" type "] " title
+            else print slug "\t" title
+        }
+    }' | sort -u > "$_res_file"
+
+    if [ -s "$_res_file" ]; then
+        _idx=1000
+        while IFS= read -r _line; do
             [ -z "$_line" ] && continue
-            _slug="$(printf "%s" "$_line" | cut -f 1)"
-            _title="$(printf "%s" "$_line" | cut -f 2-)"
-            _yr="$(anidb_curl "https://jkanime.net/${_slug}/" | sed -nE 's|.*<span> *Emitido: *</span>.*([0-9]{4}).*|\1|p' | head -n 1)"
-            [ -z "$_yr" ] && _yr="$(anidb_curl "https://jkanime.net/${_slug}/" | sed -nE 's|.*temporada/[^"]*([0-9]{4}).*|\1|p' | head -n 1)"
-            if [ -n "$_yr" ]; then
-                printf "%s\t%s (%s)\n" "$_slug" "$_title" "$_yr" >> "$_tmp_file"
-            else
-                printf "%s\t%s\n" "$_slug" "$_title" >> "$_tmp_file"
-            fi
-        done
-        cat "$_tmp_file"
-        rm -f "$_tmp_file"
+            _idx=$((_idx + 1))
+            (
+                _slug="$(printf "%s" "$_line" | cut -f 1)"
+                _title="$(clean_html "$(printf "%s" "$_line" | cut -f 2-)")"
+                _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
+                _yr="$(printf "%s" "$_page" | sed -nE 's|.*<span> *Emitido: *</span>.*([0-9]{4}).*|\1|p' | head -n 1)"
+                [ -z "$_yr" ] && _yr="$(printf "%s" "$_page" | sed -nE 's|.*temporada/[^"]*([0-9]{4}).*|\1|p' | head -n 1)"
+                _eps="$(printf "%s" "$_page" | sed -nE 's|.*<span>Episodios:</span> *([0-9]+).*|\1|p' | head -n 1)"
+                _status="$(printf "%s" "$_page" | sed -nE 's|.*<span>Estado:</span> *<div[^>]*>([^<]+).*|\1|p' | head -n 1)"
+                if [ -z "$_eps" ] || [ "$_eps" -eq 0 ]; then
+                    _eps="$(printf "%s" "$_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
+                    [ -n "$_eps" ] && [ "$_status" = "En emision" ] && _eps="${_eps}+"
+                fi
+                _has_latino="$(printf "%s" "$_page" | grep -i "Latino" || true)"
+
+                _meta=""
+                [ -n "$_yr" ] && _meta="${_meta} (${_yr})"
+                [ -n "$_eps" ] && _meta="${_meta} • ${_eps} eps"
+                [ -n "$_has_latino" ] && _meta="${_meta} • 🇲🇽 Latino"
+
+                printf "%s\t%s%s\n" "$_slug" "$_title" "$_meta" > "$_tmp_dir/item_$_idx"
+            ) &
+        done < "$_res_file"
+        wait 2>/dev/null || true
+
+        cat "$_tmp_dir"/item_* 2>/dev/null
+        rm -rf "$_tmp_dir"
     else
+        rm -rf "$_tmp_dir"
         _slug="$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]' | tr '+' '-' | sed 's| +| |g; s| |-|g')"
         _direct_page="$(anidb_curl "https://jkanime.net/${_slug}/")"
         if ! printf "%s" "$_direct_page" | grep -q "404.png"; then
-            _title="$(printf "%s" "$_direct_page" | sed -nE 's|.*<title>([^<]+) - anime.*|\1|p' | head -n 1)"
-            _type="$(printf "%s" "$_direct_page" | sed -nE 's|.*<span>Tipo:</span> *([^<]+).*|\1|p' | head -n 1)"
+            _title="$(clean_html "$(printf "%s" "$_direct_page" | sed -nE 's|.*<title>([^<]+) - anime.*|\1|p' | head -n 1)")"
+            _type="$(clean_html "$(printf "%s" "$_direct_page" | sed -nE 's|.*<span>Tipo:</span> *([^<]+).*|\1|p' | head -n 1)")"
             _yr="$(printf "%s" "$_direct_page" | sed -nE 's|.*<span> *Emitido: *</span>.*([0-9]{4}).*|\1|p' | head -n 1)"
+            _eps="$(printf "%s" "$_direct_page" | sed -nE 's|.*<span>Episodios:</span> *([0-9]+).*|\1|p' | head -n 1)"
+            _status="$(printf "%s" "$_direct_page" | sed -nE 's|.*<span>Estado:</span> *<div[^>]*>([^<]+).*|\1|p' | head -n 1)"
+            if [ -z "$_eps" ] || [ "$_eps" -eq 0 ]; then
+                _eps="$(printf "%s" "$_direct_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
+                [ -n "$_eps" ] && [ "$_status" = "En emision" ] && _eps="${_eps}+"
+            fi
+            _has_latino="$(printf "%s" "$_direct_page" | grep -i "Latino" || true)"
             [ -z "$_title" ] && _title="$_slug"
             [ -n "$_type" ] && _title="[${_type}] ${_title}"
             [ -n "$_yr" ] && _title="${_title} (${_yr})"
+            [ -n "$_eps" ] && _title="${_title} • ${_eps} eps"
+            [ -n "$_has_latino" ] && _title="${_title} • 🇲🇽 Latino"
             printf "%s\t%s\n" "$_slug" "$_title"
         fi
+    fi
+}
+
+jkanime_estrenos() {
+    start_spinner "Obteniendo cartelera de estrenos..."
+    _page="$(anidb_curl "https://jkanime.net/")"
+    stop_spinner
+    [ -z "$_page" ] && die "No se pudo conectar con JKAnime"
+
+    printf "%s" "$_page" | awk '
+    BEGIN { RS="<div class=\"mb-4 d-flex align-items-stretch mb-3 dir1\">" }
+    NR > 1 {
+        slug=""; ep=""; day=""; title=""
+        if (match($0, /href="https:\/\/jkanime\.net\/([^\/]+)\/([0-9]+)\/"/, m)) {
+            slug = m[1]
+            ep = m[2]
+        }
+        if (match($0, /badge-primary">Ep ([0-9]+)</, m)) {
+            if (ep == "") ep = m[1]
+        }
+        if (match($0, /<\/i> *([^<]+)<\/span>/, m)) {
+            day = m[1]
+        }
+        if (match($0, /card-title">([^<]+)<\/h5>/, m)) {
+            title = m[1]
+        }
+        if (slug != "" && ep != "") {
+            if (title == "") title = slug
+            if (day != "") print slug ":" ep "\t🌟 [" day "] " title " • Ep. " ep
+            else print slug ":" ep "\t🌟 " title " • Ep. " ep
+        }
+    }' | clean_html
+}
+
+jkanime_generos() {
+    _genre_menu="[01] ⚔️   ACCIÓN             ▸ Combates, peleas y adrenalina	accion
+[02] 🗺️   AVENTURA           ▸ Viajes, exploración y mundos abiertos	aventura
+[03] 🌀  ISEKAI             ▸ Reencarnaciones y mundos paralelos	isekai
+[04] 🎭  COMEDIA            ▸ Humor, risas y parodias	comedia
+[05] 🚀  CIENCIA FICCIÓN    ▸ Futuro, tecnología y espacio	sci-fi
+[06] 🧙  FANTASÍA           ▸ Magia, reinos y criaturas míticas	fantasia
+[07] 💖  ROMANCE            ▸ Historias de amor y drama romántico	romance
+[08] 🩸  SEINEN             ▸ Historias maduras y complejas	seinen
+[09] 🔥  SHOUNEN            ▸ Superación, batallas y energía juvenil	shounen
+[10] 👻  SOBRENATURAL       ▸ Fantasmas, espíritus y lo oculto	sobrenatural
+[11] 💀  TERROR             ▸ Horror, suspenso y escalofríos	terror
+[12] 🔍  MISTERIO           ▸ Casos policiales y acertijos	misterio
+[13] 🥊  ARTES MARCIALES    ▸ Técnicas de combate y artes marciales	artes-marciales
+[14] 🧠  PSICOLÓGICO        ▸ Juegos mentales y thrillers	psicologico
+[15] ⚽  DEPORTES           ▸ Fútbol, basket, boxeo y atletismo	deportes
+[16] ✨  MAGIA              ▸ Hechizos, academias de magia	magia
+[17] 🤖  MECHA              ▸ Robots gigantes y combate mecánico	mecha
+[18] 👑  HISTÓRICO          ▸ Épocas antiguas y samuráis	historico
+[19] 🎵  MÚSICA             ▸ Bandas, ídols y conciertos	musica
+[20] 🎮  JUEGOS             ▸ Gaming, realidad virtual y torneos	juegos
+[21] 🍳  GOURMET            ▸ Cocina, comida y recetas	gourmet
+[22] 🏫  ESCOLAR            ▸ Vida estudiantil y academias	escolar
+[23] 🌸  SLICE OF LIFE      ▸ Recuentos de la vida cotidiana	recuentos-de-la-vida"
+
+    _chosen_genre="$(printf "%s\n" "$_genre_menu" | nth "◄═══[ EXPLORADOR DE GÉNEROS ]═══► ")"
+    [ -z "$_chosen_genre" ] && return 0
+    _genre_slug="$(printf "%s" "$_chosen_genre" | cut -f 2)"
+
+    start_spinner "Cargando catálogo de $_genre_slug..."
+    _page="$(anidb_curl "https://jkanime.net/genero/${_genre_slug}/")"
+    
+    _tmp_dir="$(mktemp -d)"
+    _res_file="$_tmp_dir/results.txt"
+
+    printf "%s" "$_page" | awk '
+    BEGIN { RS="<div class=\"mb-4 d-flex align-items-stretch mb-3 dir1\">"; FS="\n" }
+    NR > 1 {
+        slug=""; type=""; status=""; title=""
+        for (i=1; i<=NF; i++) {
+            if ($i ~ /href="https:\/\/jkanime.net\/[^\/]+\/"/ && slug == "") {
+                match($i, /href="https:\/\/jkanime.net\/([^\/]+)\/"/, m)
+                slug = m[1]
+            }
+            if ($i ~ /badge-primary">/) {
+                match($i, /badge-primary">([^<]+)</, m)
+                if (type == "") type = m[1]
+                else if (status == "") status = m[1]
+            }
+            if ($i ~ /card-title">/) {
+                match($i, /card-title">([^<]+)<\/h5>/, m)
+                title = m[1]
+            }
+        }
+        if (slug != "" && title != "") {
+            if (type != "") print slug "\t[" type "] " title
+            else print slug "\t" title
+        }
+    }' | sort -u > "$_res_file"
+
+    if [ -s "$_res_file" ]; then
+        _idx=1000
+        while IFS= read -r _line; do
+            [ -z "$_line" ] && continue
+            _idx=$((_idx + 1))
+            (
+                _s="$(printf "%s" "$_line" | cut -f 1)"
+                _t="$(clean_html "$(printf "%s" "$_line" | cut -f 2-)")"
+                _p="$(anidb_curl "https://jkanime.net/${_s}/")"
+                _yr="$(printf "%s" "$_p" | sed -nE "s|.*<span> *Emitido: *</span>.*([0-9]{4}).*|\1|p" | head -n 1)"
+                [ -z "$_yr" ] && _yr="$(printf "%s" "$_p" | sed -nE "s|.*temporada/[^\"]*([0-9]{4}).*|\1|p" | head -n 1)"
+                _eps="$(printf "%s" "$_p" | sed -nE "s|.*<span>Episodios:</span> *([0-9]+).*|\1|p" | head -n 1)"
+                _st="$(printf "%s" "$_p" | sed -nE "s|.*<span>Estado:</span> *<div[^>]*>([^<]+).*|\1|p" | head -n 1)"
+                if [ -z "$_eps" ] || [ "$_eps" -eq 0 ]; then
+                    _eps="$(printf "%s" "$_p" | sed -nE "s|.*jkanime\.net/${_s}/([0-9]+)/.*id=\"uep\".*|\1|p" | head -n 1)"
+                    [ -n "$_eps" ] && [ "$_st" = "En emision" ] && _eps="${_eps}+"
+                fi
+                _has_latino="$(printf "%s" "$_p" | grep -i "Latino" || true)"
+
+                _meta=""
+                [ -n "$_yr" ] && _meta="${_meta} (${_yr})"
+                [ -n "$_eps" ] && _meta="${_meta} • ${_eps} eps"
+                [ -n "$_has_latino" ] && _meta="${_meta} • 🇲🇽 Latino"
+
+                printf "%s\t%s%s\n" "$_s" "$_t" "$_meta" > "$_tmp_dir/item_$_idx"
+            ) &
+        done < "$_res_file"
+        wait 2>/dev/null || true
+        stop_spinner
+        cat "$_tmp_dir"/item_* 2>/dev/null
+        rm -rf "$_tmp_dir"
+    else
+        stop_spinner
+        rm -rf "$_tmp_dir"
     fi
 }
 
 jkanime_episodes() {
     _slug="$1"
     _page="$(anidb_curl "https://jkanime.net/${_slug}/")"
+    _token="$(printf "%s" "$_page" | sed -nE 's|.*csrf-token" content="([^"]+)".*|\1|p' | head -n 1)"
+    _anime_id="$(printf "%s" "$_page" | sed -nE 's|.*data-anime="([0-9]+)".*|\1|p' | head -n 1)"
     _max_ep="$(printf "%s" "$_page" | sed -nE 's|.*<span>Episodios:</span> *([0-9]+).*|\1|p' | head -n 1)"
     if [ -z "$_max_ep" ] || [ "$_max_ep" -eq 0 ]; then
         _max_ep="$(printf "%s" "$_page" | sed -nE 's|.*jkanime\.net/'"${_slug}"'/([0-9]+)/.*id="uep".*|\1|p' | head -n 1)"
     fi
     [ -z "$_max_ep" ] && _max_ep=12
+
+    _dates_map=""
+    if [ -n "$_anime_id" ] && [ -n "$_token" ]; then
+        _json="$(anidb_curl -X POST "https://jkanime.net/ajax/episodes/${_anime_id}/1" -H "X-CSRF-TOKEN: $_token" -H "X-Requested-With: XMLHttpRequest" --data-urlencode "_token=$_token")"
+        _dates_map="$(printf "%s" "$_json" | grep -oE '\{"id":[^}]+\}' | sed -nE 's|.*"number":([0-9]+).*"timestamp":"([0-9]{4}-[0-9]{2}-[0-9]{2}).*|\1\t\2|p')"
+    fi
+
     if [ "$_max_ep" -eq 1 ]; then
-        printf "1\t🎬 Película / Especial (Episodio Único)\n"
+        _date="$(printf "%s\n" "$_dates_map" | awk '$1 == 1 {print $2}')"
+        if [ -n "$_date" ]; then
+            printf "1\t🎬 Película / Especial (Episodio Único)  [%s]\n" "$_date"
+        else
+            printf "1\t🎬 Película / Especial (Episodio Único)\n"
+        fi
     else
         seq 1 "$_max_ep" | while read -r _num; do
-            printf "%s\t📺 Episodio %02d\n" "$_num" "$_num"
+            _date="$(printf "%s\n" "$_dates_map" | awk -v n="$_num" '$1 == n {print $2}')"
+            _badge=""
+            [ "$_num" -eq "$_max_ep" ] && _badge=" 🆕"
+            if [ -n "$_date" ]; then
+                printf "%s\t📺 Episodio %02d  [%s]%s\n" "$_num" "$_num" "$_date" "$_badge"
+            else
+                printf "%s\t📺 Episodio %02d%s\n" "$_num" "$_num" "$_badge"
+            fi
         done
     fi
 }
@@ -327,12 +579,30 @@ jkanime_m3u8() {
     _slug="$1"
     _ep_no="$2"
     _page="$(anidb_curl "https://jkanime.net/${_slug}/${_ep_no}/")"
-    _embed_url="$(printf "%s" "$_page" | sed -nE "s|.*video\[0\] = '<iframe class=\"player_conte\" src=\"([^\"]+)\".*|\1|p" | head -n 1)"
-    [ -z "$_embed_url" ] && return 1
-    _embed_page="$(anidb_curl "$_embed_url")"
-    _m3u8_master="$(printf "%s" "$_embed_page" | sed -nE "s|.*loadSource\( *'([^']+)'.*|\1|p" | head -n 1)"
-    [ -z "$_m3u8_master" ] && return 1
-    printf "1080p >%s\n" "$_m3u8_master"
+    _embeds="$(printf "%s" "$_page" | sed -nE "s|.*video\[[0-9]+\] = '<iframe[^>]+src=\"([^\"]+)\".*|\1|p")"
+    [ -z "$_embeds" ] && return 1
+
+    printf "%s\n" "$_embeds" | while IFS= read -r _embed_url; do
+        [ -z "$_embed_url" ] && continue
+        _embed_page="$(anidb_curl "$_embed_url")"
+        [ -z "$_embed_page" ] && continue
+
+        # 1. HLS loadSource
+        _m3u8="$(printf "%s" "$_embed_page" | sed -nE "s|.*loadSource\([[:space:]]*['\"]([^'\"]+)['\"].*|\1|p" | head -n 1)"
+        [ -n "$_m3u8" ] && printf "1080p >%s\n" "$_m3u8" && continue
+
+        # 2. Source tag
+        _src="$(printf "%s" "$_embed_page" | sed -nE "s|.*<source[^>]+src=['\"]([^'\"]+)['\"].*|\1|p" | head -n 1)"
+        [ -n "$_src" ] && printf "1080p >%s\n" "$_src" && continue
+
+        # 3. Direct url parameter
+        _url="$(printf "%s" "$_embed_page" | sed -nE "s|.*url:[[:space:]]*['\"]([^'\"]+)['\"].*|\1|p" | head -n 1)"
+        [ -n "$_url" ] && printf "1080p >%s\n" "$_url" && continue
+
+        # 4. File parameter
+        _file="$(printf "%s" "$_embed_page" | sed -nE "s|.*file:[[:space:]]*['\"]([^'\"]+)['\"].*|\1|p" | head -n 1)"
+        [ -n "$_file" ] && printf "1080p >%s\n" "$_file" && continue
+    done | awk '!seen[$0]++'
 }
 
 # select the quality according to the setting
@@ -350,22 +620,12 @@ select_quality() {
 # gets embed url, collects direct links and selects one with desired quality into $episode
 get_video_link() {
     start_spinner "Obteniendo enlaces de reproducción..."
-    if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
-        links=$(jkanime_m3u8 "$anime_id" "$ep_no" | sort -g -r -s)
-        [ -z "$links" ] && links=$(anidb_m3u8 "$ep_no" "$mode" | sort -g -r -s)
-    else
-        links=$(anidb_m3u8 "$ep_no" "$mode" | sort -g -r -s)
-    fi
+    links="$(jkanime_m3u8 "$anime_id" "$ep_no")"
     stop_spinner
-    [ -z "$links" ] && die "No se encontraron fuentes de reproducción!"
+    [ -z "$links" ] && die "No se encontraron fuentes de reproducción para el episodio $ep_no!"
     success "Enlaces obtenidos con éxito"
     select_quality "$quality"
-    # should never trigger but just in case
-    if printf "%s" "$ep_list" | grep -q "^$ep_no$"; then
-        [ -z "$video_link" ] && die "Episode is released, but no valid sources!"
-    else
-        [ -z "$video_link" ] && die "Episode not released!"
-    fi
+    [ -z "$video_link" ] && die "No se pudo resolver el enlace de vídeo!"
 }
 
 # provide countdown for the next episode release both sub and dub
@@ -411,34 +671,210 @@ time_until_next_ep() {
 
 # HISTORY
 
-backup_old_hist() {
-    backupfile="${histfile}.v4"
-    while IFS="	" read -r ep_no anime_id anime_title; do
-        case "$anime_id" in
-            *-*) printf "%s\t%s\t%s\n" "$ep_no" "$anime_id" "$anime_title" >>"${histfile}.new" ;;
-            *) printf "%s\t%s\t%s\n" "$ep_no" "$anime_id" "$anime_title" >>"$backupfile" ;;
-        esac
-    done <"$histfile"
-    mv "${histfile}.new" "$histfile"
-}
+migrate_history() {
+    [ ! -f "$histfile" ] && return 0
+    [ ! -s "$histfile" ] && return 0
+    _now="$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "2026-01-01 00:00:00")"
+    _tmp_mig="${histfile}.mig"
+    _migrated=0
+    rm -f "$_tmp_mig"
 
-process_hist_entry() {
-    ep_list=$(anidb_episodes "$anime_id" | cut -f 2)
-    ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{n;p;}") 2>/dev/null
-    [ -n "$ep_no" ] && printf "%s\t%s - episode %s\n" "$anime_id" "$anime_title" "$ep_no"
+    while IFS="	" read -r c1 c2 c3 c4 c5; do
+        [ -z "$c1" ] && continue
+        if [ -n "$c3" ] && [ -z "$c4" ]; then
+            # Legacy format: ep_no \t anime_id \t anime_title
+            _ep="$c1"
+            _id="$c2"
+            _title="$c3"
+            _l="${lang:-es}"
+            printf "%s\t%s\t%s\t%s\t%s\n" "$_now" "$_id" "$_ep" "$_title" "$_l" >> "$_tmp_mig"
+            _migrated=1
+        elif [ -n "$c4" ]; then
+            # New format: timestamp \t anime_id \t ep_no \t anime_title \t lang
+            _ts="$c1"
+            _id="$c2"
+            _ep="$c3"
+            _title="$c4"
+            _l="${c5:-${lang:-es}}"
+            printf "%s\t%s\t%s\t%s\t%s\n" "$_ts" "$_id" "$_ep" "$_title" "$_l" >> "$_tmp_mig"
+        fi
+    done < "$histfile"
+
+    if [ -s "$_tmp_mig" ]; then
+        mv "$_tmp_mig" "$histfile"
+    else
+        rm -f "$_tmp_mig"
+    fi
 }
 
 update_history() {
-    if grep -q "	${anime_id}	" "$histfile"; then
-        # escape sed special chars in replacement: & and \ and delimiter |
-        safe_title=$(printf "%s" "$anime_title" | sed 's|[&\|]|\\&|g')
-        sed -E "s|^[^	]+	${anime_id}	[^	]+$|${ep_no}	${anime_id}	${safe_title}|" "$histfile" >"${histfile}.new"
-    else
-        cp "$histfile" "${histfile}.new"
-        printf "%s\t%s\t%s\n" "$ep_no" "$anime_id" "$anime_title" >>"${histfile}.new"
+    [ -z "$anime_id" ] || [ -z "$ep_no" ] && return 0
+    migrate_history
+    _now="$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "2026-01-01 00:00:00")"
+    _l="${lang:-es}"
+    _clean_title="$(printf "%s" "${anime_title:-$anime_id}" | tr '\t' ' ')"
+
+    _tmp_hist="${histfile}.tmp"
+    rm -f "$_tmp_hist"
+
+    if [ -f "$histfile" ]; then
+        grep -v "	${anime_id}	" "$histfile" > "$_tmp_hist" 2>/dev/null || true
     fi
+
+    printf "%s\t%s\t%s\t%s\t%s\n" "$_now" "$anime_id" "$ep_no" "$_clean_title" "$_l" > "${histfile}.new"
+    [ -f "$_tmp_hist" ] && cat "$_tmp_hist" >> "${histfile}.new"
+    mv "${histfile}.new" "$histfile"
+    rm -f "$_tmp_hist"
+}
+
+delete_from_history() {
+    _del_id="$1"
+    [ -z "$_del_id" ] || [ ! -f "$histfile" ] && return 0
+    grep -v "	${_del_id}	" "$histfile" > "${histfile}.new" 2>/dev/null || true
     mv "${histfile}.new" "$histfile"
 }
+
+offline_library_tui() {
+    _dl_dir="${download_dir:-.}"
+    if [ ! -d "$_dl_dir" ]; then
+        warn "Directorio de descargas no encontrado: $_dl_dir"
+        return 1
+    fi
+
+    _files="$(find "$_dl_dir" -maxdepth 2 -type f \( -name "*.mp4" -o -name "*.mkv" -o -name "*.webm" \) 2>/dev/null | sort)"
+    if [ -z "$_files" ]; then
+        warn "No se encontraron episodios descargados en $_dl_dir"
+        return 1
+    fi
+
+    _formatted_files="$(printf "%s\n" "$_files" | while read -r _f; do
+        [ -z "$_f" ] && continue
+        _bname="$(basename "$_f")"
+        _sz="$(du -h "$_f" 2>/dev/null | cut -f 1)"
+        printf "%s\t📁 %s  [%s]\n" "$_f" "$_bname" "$_sz"
+    done)"
+
+    while true; do
+        _selected_file="$(printf "%s\n" "$_formatted_files" | nth "Biblioteca Local (Descargas Offline): ")"
+        [ -z "$_selected_file" ] && return 0
+
+        _filepath="$(printf "%s" "$_selected_file" | cut -f 1)"
+        [ ! -f "$_filepath" ] && warn "Archivo no encontrado: $_filepath" && continue
+
+        _filename="$(basename "$_filepath")"
+        info "Reproduciendo offline: $_filename..."
+        
+        case "$player_function" in
+            *mpv*) nohup $player_function $player_extra_flags --force-media-title="$_filename" "$_filepath" >/dev/null 2>&1 & ;;
+            *vlc*) nohup $player_function $player_extra_flags --play-and-exit --meta-title="$_filename" "$_filepath" >/dev/null 2>&1 & ;;
+            *) nohup $player_function $player_extra_flags "$_filepath" >/dev/null 2>&1 & ;;
+        esac
+        return 0
+    done
+}
+
+history_tui() {
+    migrate_history
+    while true; do
+        if [ ! -s "$histfile" ]; then
+            warn "El historial está vacío."
+            return 1
+        fi
+
+        _formatted_hist="$(while IFS="	" read -r _ts _id _ep _title _l; do
+            [ -z "$_id" ] && continue
+            _date_short="$(printf "%s" "$_ts" | cut -d ' ' -f 1)"
+            printf "%s\t🕒 [%s] %s • Ep. %s\n" "$_id" "$_date_short" "$_title" "$_ep"
+        done < "$histfile")"
+
+        if [ -z "$_formatted_hist" ]; then
+            warn "El historial está vacío."
+            return 1
+        fi
+
+        _selected_id="$(printf "%s" "$_formatted_hist" | nth "Historial de reproducción: ")"
+        [ -z "$_selected_id" ] && return 0
+
+        anime_id="$(printf "%s" "$_selected_id" | cut -f 1)"
+        _hist_line="$(awk -F'\t' -v id="$anime_id" '$2 == id {print; exit}' "$histfile")"
+        [ -z "$_hist_line" ] && continue
+
+        _last_ep="$(printf "%s" "$_hist_line" | cut -f 3)"
+        anime_title="$(printf "%s" "$_hist_line" | cut -f 4)"
+        _hist_lang="$(printf "%s" "$_hist_line" | cut -f 5)"
+        [ -n "$_hist_lang" ] && lang="$_hist_lang"
+
+        while true; do
+            _action="$(printf "[1] ⏯️  CONTINUAR VIENDO           ▸ Siguiente episodio\n[2] 🔄  REPLAY / VOLVER A VER      ▸ Repetir episodio %s\n[3] 📑  SELECCIONAR EPISODIO       ▸ Elegir de la lista\n[4] ℹ️   FICHA TÉCNICA / DETALLES   ▸ Ver póster y sinopsis\n[5] 🗑️   ELIMINAR DEL HISTORIAL     ▸ Quitar de la lista\n[0] ↩️  VOLVER AL MENÚ             ▸ Regresar" "$_last_ep" | nth "◄═══[ HISTORIAL: $anime_title • Ep. $_last_ep ]═══►: ")"
+            [ -z "$_action" ] && break
+
+            case "$_action" in
+                *1*|*CONTINUAR*|*Continuar*)
+                    start_spinner "Cargando episodios de $anime_title..."
+                    episode_maps="$(jkanime_episodes "$anime_id")"
+                    jkanime_desc "$anime_id" || true
+                    stop_spinner
+                    [ -z "$episode_maps" ] && warn "No se pudieron obtener episodios." && continue
+                    ep_list="$(printf "%s" "$episode_maps" | cut -f 1)"
+
+                    _next_ep="$(printf "%s" "$ep_list" | sed -n "/^${_last_ep}$/{n;p;}")"
+                    if [ -z "$_next_ep" ]; then
+                        info "Continuando en el episodio actual ($_last_ep)..."
+                        ep_no="$_last_ep"
+                    else
+                        ep_no="$_next_ep"
+                    fi
+                    play
+                    interactive_loop
+                    return 0
+                    ;;
+                *2*|*REPLAY*|*Replay*|*VOLVER*A*VER*|*Volver*a*ver*)
+                    start_spinner "Cargando episodios de $anime_title..."
+                    episode_maps="$(jkanime_episodes "$anime_id")"
+                    jkanime_desc "$anime_id" || true
+                    stop_spinner
+                    [ -z "$episode_maps" ] && warn "No se pudieron obtener episodios." && continue
+                    ep_list="$(printf "%s" "$episode_maps" | cut -f 1)"
+
+                    ep_no="$_last_ep"
+                    play
+                    interactive_loop
+                    return 0
+                    ;;
+                *3*|*SELECCIONAR*|*Seleccionar*)
+                    start_spinner "Cargando episodios de $anime_title..."
+                    episode_maps="$(jkanime_episodes "$anime_id")"
+                    jkanime_desc "$anime_id" || true
+                    stop_spinner
+                    [ -z "$episode_maps" ] && warn "No se pudieron obtener episodios." && continue
+                    ep_list="$(printf "%s" "$episode_maps" | cut -f 1)"
+
+                    _selected_ep="$(printf "%s" "$episode_maps" | nth "Seleccionar episodio: " "$menu_multi_flag")"
+                    if [ -n "$_selected_ep" ]; then
+                        ep_no="$_selected_ep"
+                        play
+                        interactive_loop
+                        return 0
+                    fi
+                    ;;
+                *4*|*FICHA*|*Ficha*|*DETALLES*|*detalles*|*INFORMACIÓN*|*información*)
+                    tput clear
+                    jkanime_preview "$anime_id"
+                    printf "\n\033[1;36mPresiona Enter para regresar...\033[0m" && read -r _dummy
+                    ;;
+                *5*|*ELIMINAR*|*Eliminar*)
+                    delete_from_history "$anime_id"
+                    success "Anime '$anime_title' eliminado del historial."
+                    break
+                    ;;
+                *)
+                    break
+                    ;;
+            esac
+        done
+    done
+}
+
 
 # PLAYING
 
@@ -524,15 +960,78 @@ play() {
     [ "$player_function" != "debug" ] && [ "$player_function" != "download" ] && tput rc && tput ed
 }
 
+interactive_loop() {
+    [ "$player_function" = "download" ] || [ "$player_function" = "debug" ] && return 0
+    # shellcheck disable=SC2059
+    while cmd=$(printf "[N] ⏭️  SIGUIENTE EPISODIO       ▸ Avanzar al siguiente\n[R] 🔄  REPETIR EPISODIO         ▸ Volver a reproducir\n[P] ⏮️  EPISODIO ANTERIOR        ▸ Retroceder uno\n[E] 📑  SELECCIONAR EPISODIO     ▸ Elegir de la lista\n[B] ↩️  VOLVER A RESULTADOS      ▸ Regresar a la búsqueda\n[S] 🔍  BUSCAR OTRO ANIME        ▸ Nueva búsqueda$seasons_option\n[Q] ⚙️  CAMBIAR CALIDAD          ▸ Ajustar resolución\n[X] 🚪  SALIR                    ▸ Terminar reproducción" | nth "◄═══[ CONTROL DECK: Ep. $ep_no • $anime_title ]═══► "); do
+        case "$cmd" in
+            *SIGUIENTE*|*Siguiente*)
+                ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{n;p;}") 2>/dev/null
+                [ -z "$ep_no" ] && warn "No hay más episodios siguientes" && ep_no=$(printf "%s" "$ep_list" | tail -n 1)
+                play
+                ;;
+            *Repetir*)
+                video_link="$replay"
+                play
+                ;;
+            *anterior*)
+                ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{g;1!p;};h") 2>/dev/null
+                [ -z "$ep_no" ] && warn "No hay episodios anteriores" && ep_no=$(printf "%s" "$ep_list" | head -n 1)
+                play
+                ;;
+            *Seleccionar*)
+                _new_ep=$(printf "%s" "$episode_maps" | nth "Seleccionar episodio: " "$menu_multi_flag")
+                [ -n "$_new_ep" ] && ep_no="$_new_ep" && play
+                ;;
+            *temporada*|*Relacionados*)
+                _selected_season=$(printf "%s" "$seasons" | nth "Seleccionar temporada / relacionado: ")
+                if [ -n "$_selected_season" ]; then
+                    anime_id="$(printf "%s" "$_selected_season" | cut -f 1)"
+                    anime_title="$(printf "%s" "$_selected_season" | cut -f 2)"
+                    start_spinner "Cargando episodios de $anime_title..."
+                    episode_maps="$(jkanime_episodes "$anime_id")"
+                    jkanime_desc "$anime_id" || true
+                    stop_spinner
+                    ep_list="$(printf '%s' "$episode_maps" | cut -f 1)"
+                    ep_no="$(printf '%s' "$ep_list" | head -n 1)"
+                    play
+                fi
+                ;;
+            *resultados*)
+                result=""
+                anime_id=""
+                ep_no=""
+                _res_count="$(printf "%s\n" "$anime_list" | wc -l | tr -d "[:space:]")"
+                if [ "$_res_count" -le 1 ]; then
+                    query=""
+                    anime_list=""
+                fi
+                break
+                ;;
+            *Buscar*)
+                query=""
+                anime_list=""
+                result=""
+                anime_id=""
+                ep_no=""
+                break
+                ;;
+            *calidad*)
+                new_quality="$(printf "%s" "$links" | menu "Seleccionar calidad: " "" "$menu_extra_flags" | cut -d ">" -f 1)"
+                [ -n "$new_quality" ] && select_quality "$new_quality" && play
+                ;;
+            *)
+                cleanup
+                exit 0
+                ;;
+        esac
+    done
+}
+
 # MAIN
 
 # setup
-base_api="https://anidb.app"
-search_api="${base_api}/browse?q=%s"
-# search_api_alt="${base_api}/search/suggestions?q=%s"
-desc_api="${base_api}/anime/%s"
-episodes_api="${base_api}/api/frontend/anime/%s/episodes"
-m3u8_api="${base_api}/api/frontend/episode/%s/languages"
+base_url="https://jkanime.net"
 
 ciphers='ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305'
 tls13_ciphers='TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
@@ -561,6 +1060,14 @@ case "$(uname -a | cut -d " " -f 1,3-)" in
 esac
 
 player_extra_flags="${ANI_CLI_PLAYER_FLAGS:-""}"
+case "$player_function" in
+    *mpv*)
+        case "$player_extra_flags" in
+            *--save-position-on-quit*) ;;
+            *) player_extra_flags="$player_extra_flags --save-position-on-quit" ;;
+        esac
+        ;;
+esac
 no_detach="${ANI_CLI_NO_DETACH:-0}"
 exit_after_play="${ANI_CLI_EXIT_AFTER_PLAY:-0}"
 skip_intro="${ANI_CLI_SKIP_INTRO:-0}"
@@ -611,6 +1118,9 @@ while [ $# -gt 0 ]; do
             index="$2"
             shift
             ;;
+        -E | --estrenos) source=estrenos ;;
+        -G | --generos) source=generos ;;
+        -B | --biblioteca) source=biblioteca ;;
         -c | --continue) source=history ;;
         -d | --download)
             player_function=download
@@ -633,6 +1143,11 @@ while [ $# -gt 0 ]; do
             [ $# -lt 2 ] && die "missing argument!"
             ep_no="$2"
             shift
+            ;;
+        --preview)
+            [ $# -lt 2 ] && exit 0
+            jkanime_preview "$2"
+            exit 0
             ;;
         --dub) mode="dub" ;;
         -L | --lang)
@@ -682,30 +1197,96 @@ print_banner
 
 case "$source" in
     history)
-        backup_old_hist
-        anime_list=$(while read -r ep_no anime_id anime_title; do process_hist_entry & done <"$histfile")
-        wait
-        [ -z "$anime_list" ] && die "No unwatched series in history!"
-        [ -z "${index##*[!0-9]*}" ] && anime_id=$(printf "%s" "$anime_list" | nl -w 2 | sed 's/^[[:space:]]//' | nth "Select anime: " | cut -f 1)
-        [ -z "${index##*[!0-9]*}" ] || anime_id=$(printf "%s" "$anime_list" | sed -n "${index}p" | cut -f 1)
-        [ -z "$anime_id" ] && exit 1
-        anime_title=$(printf "%s" "$anime_list" | grep "^$anime_id	" | cut -f 2 | sed 's| - episode.*||')
-        anidb_desc "$anime_id" || true
-        episode_maps="$(anidb_episodes "$anime_id")"
-        ep_list="$(printf "%s" "$episode_maps" | cut -f 2)"
-        ep_no=$(printf "%s" "$anime_list" | grep "^$anime_id	" | sed -nE 's/.*- episode (.+)$/\1/p')
-        play
+        history_tui || exit 0
+        ;;
+    estrenos)
+        _estrenos_list="$(jkanime_estrenos)"
+        if [ -n "$_estrenos_list" ]; then
+            _selected="$(printf "%s\n" "$_estrenos_list" | nth "🌟 Cartelera de Estrenos: ")"
+            if [ -n "$_selected" ]; then
+                _selected_slug="$(printf "%s" "$_selected" | cut -f 1)"
+                anime_id="$(printf "%s" "$_selected_slug" | cut -d ':' -f 1)"
+                ep_no="$(printf "%s" "$_selected_slug" | cut -d ':' -f 2)"
+                anime_title="$(printf "%s" "$_selected" | cut -f 2- | sed -E 's|^🌟 \[[^]]*\] *||; s| • Ep\. [0-9]+$||')"
+                start_spinner "Cargando episodios de $anime_title..."
+                episode_maps="$(jkanime_episodes "$anime_id")"
+                jkanime_desc "$anime_id" || true
+                stop_spinner
+                ep_list="$(printf '%s' "$episode_maps" | cut -f 1)"
+                play
+                interactive_loop
+            fi
+        fi
+        exit 0
+        ;;
+    generos)
+        anime_list="$(jkanime_generos)"
+        [ -z "$anime_list" ] && exit 0
+        ;;
+    biblioteca)
+        offline_library_tui || exit 0
+        exit 0
         ;;
     *)
         while true; do
             if [ -z "$anime_list" ]; then
-                if [ "$menu_program" = "fzf" ]; then
-                    while [ -z "$query" ]; do
-                        printf "\33[2K\r\033[1;36mBuscar anime: \033[0m" && read -r query
-                    done
-                else
-                    [ -z "$query" ] && query=$(: | menu "Buscar anime: " "" "$menu_extra_flags")
-                    [ -z "$query" ] && exit 0
+                if [ -z "$query" ]; then
+                    _main_choice="$(printf "[01] 🔍  BUSCAR ANIME              ▸ Explorar catálogo global\n[02] 🌟  CARTELERA DE ESTRENOS     ▸ Emisiones de hoy y semana\n[03] 🏷️   EXPLORADOR POR GÉNEROS    ▸ Shonen, Isekai, Seinen...\n[04] 🕒  HISTORIAL DE REPRODUCCIÓN ▸ Continuar donde lo dejaste\n[05] 📂  BIBLIOTECA OFFLINE        ▸ Descargas locales en disco\n[06] ⚙️   INFORMACIÓN Y AYUDA       ▸ Atajos y configuración\n[00] 🚪  SALIR                     ▸ Cerrar aplicación" | nth "◄═══[ ANIME DECK LAUNCHER ]═══►: ")"
+                    case "$_main_choice" in
+                        *01*|*BUSCAR*|*Buscar*|*buscar*)
+                            if [ "$menu_program" = "fzf" ]; then
+                                while [ -z "$query" ]; do
+                                    printf "\33[2K\r\033[1;36mBuscar anime: \033[0m" && read -r query
+                                done
+                            else
+                                query=$(: | menu "Buscar anime: " "" "$menu_extra_flags")
+                                [ -z "$query" ] && continue
+                            fi
+                            ;;
+                        *02*|*ESTRENOS*|*Estrenos*|*estrenos*)
+                            _estrenos_list="$(jkanime_estrenos)"
+                            if [ -n "$_estrenos_list" ]; then
+                                _selected="$(printf "%s\n" "$_estrenos_list" | nth "🌟 Cartelera de Estrenos: ")"
+                                if [ -n "$_selected" ]; then
+                                    _selected_slug="$(printf "%s" "$_selected" | cut -f 1)"
+                                    anime_id="$(printf "%s" "$_selected_slug" | cut -d ':' -f 1)"
+                                    ep_no="$(printf "%s" "$_selected_slug" | cut -d ':' -f 2)"
+                                    anime_title="$(printf "%s" "$_selected" | cut -f 2- | sed -E 's|^🌟 \[[^]]*\] *||; s| • Ep\. [0-9]+$||')"
+                                    start_spinner "Cargando episodios de $anime_title..."
+                                    episode_maps="$(jkanime_episodes "$anime_id")"
+                                    jkanime_desc "$anime_id" || true
+                                    stop_spinner
+                                    ep_list="$(printf '%s' "$episode_maps" | cut -f 1)"
+                                    play
+                                    interactive_loop
+                                fi
+                            fi
+                            continue
+                            ;;
+                        *03*|*GÉNEROS*|*GENEROF*|*Géneros*|*géneros*|*generos*)
+                            anime_list="$(jkanime_generos)"
+                            [ -z "$anime_list" ] && continue
+                            query="genre_results"
+                            ;;
+                        *04*|*HISTORIAL*|*Historial*|*historial*)
+                            history_tui
+                            continue
+                            ;;
+                        *05*|*BIBLIOTECA*|*Biblioteca*|*biblioteca*)
+                            offline_library_tui
+                            continue
+                            ;;
+                        *06*|*INFORMACIÓN*|*INFORMACION*|*Información*|*Ayuda*|*ayuda*|*información*)
+                            tput clear
+                            print_banner
+                            help_info
+                            printf "\n\033[1;36mPresiona Enter para volver...\033[0m" && read -r _dummy
+                            continue
+                            ;;
+                        *)
+                            exit 0
+                            ;;
+                    esac
                 fi
                 # for checking new releases by specifying anime name
                 [ "$source" = "nextep" ] && time_until_next_ep "$query"
@@ -713,12 +1294,7 @@ case "$source" in
                 formatted_query=$(printf "%s" "$query" | sed 's| |+|g')
 
                 start_spinner "Buscando anime..."
-                if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
-                    anime_list=$(jkanime_search "$formatted_query")
-                    [ -z "$anime_list" ] && anime_list=$(anidb_search "$formatted_query")
-                else
-                    anime_list=$(anidb_search "$formatted_query")
-                fi
+                anime_list=$(jkanime_search "$formatted_query")
                 stop_spinner
                 if [ -z "$anime_list" ]; then
                     warn "No se encontraron resultados para: $query"
@@ -731,7 +1307,7 @@ case "$source" in
                 if [ "$index" -eq "$index" ] 2>/dev/null; then
                     result=$(printf "%s" "$anime_list" | sed -n "${index}p")
                 else
-                    result=$(printf "%s" "$anime_list" | nl -w 2 | sed 's/^[[:space:]]//' | nth "Seleccionar anime: ")
+                    result=$(printf "%s" "$anime_list" | nth "Seleccionar anime: ")
                 fi
                 if [ -z "$result" ]; then
                     query=""
@@ -742,13 +1318,8 @@ case "$source" in
                 anime_id="$(printf "%s" "$result" | cut -f 1)"
 
                 start_spinner "Obteniendo lista de episodios..."
-                if [ "$lang" = "spa" ] || [ "$lang" = "es" ]; then
-                    episode_maps="$(jkanime_episodes "$anime_id")"
-                    [ -z "$episode_maps" ] && episode_maps="$(anidb_episodes "$anime_id")"
-                else
-                    anidb_desc "$anime_id" || true
-                    episode_maps="$(anidb_episodes "$anime_id")"
-                fi
+                episode_maps="$(jkanime_episodes "$anime_id")"
+                jkanime_desc "$anime_id" || true
                 stop_spinner
                 ep_list="$(printf '%s' "$episode_maps" | cut -f 1)"
             fi
@@ -775,59 +1346,7 @@ case "$source" in
             # playback
             play
             [ "$player_function" = "download" ] || [ "$player_function" = "debug" ] && break
-
-            # interactive playback & navigation loop
-            #shellcheck disable=SC2059
-            while cmd=$(printf "⏭️  Siguiente episodio\n🔄 Repetir episodio\n⏮️  Episodio anterior\n📑 Seleccionar episodio\n↩️  Volver a resultados de búsqueda\n🔍 Buscar otro anime$seasons_option\n⚙️  Cambiar calidad\n🚪 Salir" | nth "Reproduciendo episodio $ep_no de $anime_title... "); do
-                case "$cmd" in
-                    *Siguiente*)
-                        ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{n;p;}") 2>/dev/null
-                        [ -z "$ep_no" ] && warn "No hay más episodios siguientes" && ep_no=$(printf "%s" "$ep_list" | tail -n 1)
-                        play
-                        ;;
-                    *Repetir*)
-                        video_link="$replay"
-                        play
-                        ;;
-                    *anterior*)
-                        ep_no=$(printf "%s" "$ep_list" | sed -n "/^${ep_no}$/{g;1!p;};h") 2>/dev/null
-                        [ -z "$ep_no" ] && warn "No hay episodios anteriores" && ep_no=$(printf "%s" "$ep_list" | head -n 1)
-                        play
-                        ;;
-                    *Seleccionar*)
-                        _new_ep=$(printf "%s" "$episode_maps" | nth "Seleccionar episodio: " "$menu_multi_flag")
-                        [ -n "$_new_ep" ] && ep_no="$_new_ep" && play
-                        ;;
-                    *resultados*)
-                        result=""
-                        anime_id=""
-                        ep_no=""
-                        _res_count="$(printf "%s\n" "$anime_list" | wc -l | tr -d "[:space:]")"
-                        if [ "$_res_count" -le 1 ]; then
-                            query=""
-                            anime_list=""
-                        fi
-                        break
-                        ;;
-                    *Buscar*)
-                        query=""
-                        anime_list=""
-                        result=""
-                        anime_id=""
-                        ep_no=""
-                        break
-                        ;;
-                    *calidad*)
-                        new_quality="$(printf "%s" "$links" | menu "Seleccionar calidad: " "" "$menu_extra_flags" | cut -d ">" -f 1)"
-                        [ -n "$new_quality" ] && select_quality "$new_quality" && play
-                        ;;
-                    *)
-                        cleanup
-                        exit 0
-                        ;;
-                esac
-            done
-
+            interactive_loop
             [ "$player_function" = "download" ] || [ "$player_function" = "debug" ] && break
         done
         ;;
