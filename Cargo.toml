@@ -1,0 +1,25 @@
+[package]
+name = "ani-cli-es"
+version = "5.2.0-es"
+edition = "2021"
+authors = ["gerickt"]
+description = "Cliente y TUI en Rust para buscar, explorar y reproducir anime en español desde JKAnime"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+tokio = { version = "1.40", features = ["full"] }
+ratatui = "0.29"
+crossterm = { version = "0.28", features = ["event-stream"] }
+futures = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "cookies", "json"] }
+scraper = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+regex = "1.10"
+dirs = "5.0"
+anyhow = "1.0"
+thiserror = "1.0"
+unicode-width = "0.1"
+base64 = "0.22"

@@ -1,0 +1,10 @@
+pub mod detail_deck;
+pub mod estrenos_view;
+pub mod footer;
+pub mod genres_view;
+pub mod header;
+pub mod help_view;
+pub mod history_view;
+pub mod library_view;
+pub mod modal;
+pub mod search_view;
